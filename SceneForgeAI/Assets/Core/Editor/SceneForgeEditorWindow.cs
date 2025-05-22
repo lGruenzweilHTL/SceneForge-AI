@@ -30,7 +30,7 @@ public class SceneForgeEditorWindow : EditorWindow
         _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, new GUIStyle(GUI.skin.window)
             {
                 padding = new RectOffset(5, 5, 10, 10),
-                margin = new RectOffset(5, 5, 0, 0)
+                margin = new RectOffset(5, 5, 0, 0),
             }, 
             GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
         foreach (var message in history)
@@ -50,7 +50,7 @@ public class SceneForgeEditorWindow : EditorWindow
         
         if (GUILayout.Button("Send Prompt"))
         {
-            AIHandler.Prompt(_prompt);
+            AIHandler.PromptStream(_prompt);
             _prompt = string.Empty;
         }
     }

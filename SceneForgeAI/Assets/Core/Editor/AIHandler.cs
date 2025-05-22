@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
@@ -9,7 +11,7 @@ public static class AIHandler
     private const string URL = "http://127.0.0.1:11434/";
     private const string GenerateURL = URL + "api/chat";
 
-    private static List<AIMessage> messages = new()
+    private static List<AIMessage> history = new()
     {
         new AIMessage
         {
@@ -18,9 +20,9 @@ public static class AIHandler
         }
     };
 
-    public static string Prompt(string prompt)
+    public static void Prompt(string prompt)
     {
-        messages.Add(new AIMessage
+        history.Add(new AIMessage
         {
             role = "user",
             content = prompt
@@ -28,7 +30,7 @@ public static class AIHandler
         var body = new AIRequest
         {
             model = "gemma3:1b",
-            messages = messages.ToArray(),
+            messages = history.ToArray(),
             stream = false
         };
         var json = JsonConvert.SerializeObject(body);
@@ -46,40 +48,50 @@ public static class AIHandler
         if (request.result is UnityWebRequest.Result.ConnectionError or UnityWebRequest.Result.ProtocolError)
         {
             Debug.LogError($"Error: {request.error}");
-            return null;
+            return;
         }
 
         var response = JsonConvert.DeserializeObject<AIResponse>(request.downloadHandler.text);
-        messages.Add(response.message);
-        return response.message.content;
+        history.Add(response.message);
     }
     
-    public static AIMessage[] GetHistory() => messages.ToArray();
-    
-    [MenuItem("Tools/List")]
-    public static void List()
+    public static void PromptStream(string prompt)
     {
-        foreach (var message in messages)
+        EditorCoroutineRunner.StartCoroutine(StreamCoroutine(prompt));
+    }
+
+    private static IEnumerator StreamCoroutine(string prompt)
+    {
+        history.Add(new AIMessage { role = "user", content = prompt });
+        var body = new AIRequest
         {
+            model = "gemma3:1b",
+            messages = history.ToArray(),
+            stream = true
+        };
+        var json = JsonConvert.SerializeObject(body);
+        var request = new UnityWebRequest(GenerateURL, "POST");
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
 
-            Debug.Log($"{message.role}: {message.content}");
-        }
-    }
-
-    public static bool CheckConnection()
-    {
-        var request = UnityWebRequest.Get(URL);
+        var streamHandler = new StreamDownloadHandler();
+        request.downloadHandler = streamHandler;
+        request.SetRequestHeader("Content-Type", "application/json");
         request.SendWebRequest();
+
+        var msg = new AIMessage { role = "assistant", content = "" };
+        history.Add(msg);
+
         while (!request.isDone)
         {
-            // Wait for the request to complete
+            while (streamHandler.HasNewToken())
+            {
+                var token = streamHandler.GetNextToken();
+                msg.content += token;
+            }
+            yield return null;
         }
-        
-        if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
-        {
-            Debug.LogError($"Error: {request.error}");
-            return false;
-        }
-        return true;
     }
+    
+    public static AIMessage[] GetHistory() => history.ToArray();
 }
