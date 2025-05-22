@@ -8,8 +8,15 @@ public static class AIHandler
 {
     private const string URL = "http://127.0.0.1:11434/";
     private const string GenerateURL = URL + "api/chat";
-    
-    private static List<AIMessage> messages = new();
+
+    private static List<AIMessage> messages = new()
+    {
+        new AIMessage
+        {
+            role = "assistant",
+            content = "Hello! I am Scene Forge AI. How can I assist you today?"
+        }
+    };
 
     public static string Prompt(string prompt)
     {
@@ -46,6 +53,8 @@ public static class AIHandler
         messages.Add(response.message);
         return response.message.content;
     }
+    
+    public static AIMessage[] GetHistory() => messages.ToArray();
     
     [MenuItem("Tools/List")]
     public static void List()

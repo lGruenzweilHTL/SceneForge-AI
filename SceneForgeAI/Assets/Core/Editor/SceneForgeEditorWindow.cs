@@ -4,34 +4,54 @@ using UnityEngine;
 public class SceneForgeEditorWindow : EditorWindow
 {
     private string _prompt;
-    private string _response;
+    private Vector2 _scrollPosition;
     
     [MenuItem("Tools/SceneForge AI")]
     public static void ShowWindow()
     {
-        GetWindow<SceneForgeEditorWindow>("Scene Forge AI");
+        var window = GetWindow<SceneForgeEditorWindow>("Scene Forge AI");
+        window.minSize = new Vector2(400, 300);
+        window.Show();
     }
 
     private void OnGUI()
     {
-        GUILayout.Label("Scene Forge AI", EditorStyles.boldLabel);
-        GUILayout.Space(10);
-        
-        _prompt = EditorGUILayout.TextArea(_prompt, GUILayout.Height(100));
-
-        if (GUILayout.Button("Check Connection"))
+        var headerStyle = new GUIStyle(EditorStyles.label)
         {
-            _response = AIHandler.CheckConnection() ? "Connected" : "Not Connected";
+            fontSize = 20,
+            alignment = TextAnchor.MiddleCenter,
+            fontStyle = FontStyle.Bold
+        };
+        GUILayout.Label("Scene Forge AI", headerStyle);
+        GUILayout.Space(10);
+
+        var history = AIHandler.GetHistory();
+        
+        _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, new GUIStyle(GUI.skin.window)
+            {
+                padding = new RectOffset(5, 5, 10, 10),
+                margin = new RectOffset(5, 5, 0, 0)
+            }, 
+            GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
+        foreach (var message in history)
+        {
+            GUILayout.BeginVertical(GUI.skin.button);
+            GUILayout.Label(message.role.ToUpper());
+            GUILayout.Box(message.content, GUI.skin.textArea);
+            GUILayout.Space(5);
+            GUILayout.EndVertical();
+            GUILayout.Space(10);
         }
+        GUILayout.EndScrollView();
+        
+        GUILayout.Space(20);
+
+        _prompt = EditorGUILayout.TextArea(_prompt, GUILayout.Height(50));
+        
         if (GUILayout.Button("Send Prompt"))
         {
-            _response = AIHandler.Prompt(_prompt);
-        }
-        
-        if (!string.IsNullOrEmpty(_response))
-        {
-            GUILayout.Label("Response", EditorStyles.boldLabel);
-            GUILayout.TextArea(_response, GUILayout.Height(200));
+            AIHandler.Prompt(_prompt);
+            _prompt = string.Empty;
         }
     }
 }
