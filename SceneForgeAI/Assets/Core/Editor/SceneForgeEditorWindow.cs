@@ -1,4 +1,3 @@
-using System;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,7 +17,7 @@ public class SceneForgeEditorWindow : EditorWindow
         GUILayout.Label("Scene Forge AI", EditorStyles.boldLabel);
         GUILayout.Space(10);
         
-        _prompt = EditorGUILayout.TextField("Prompt", _prompt);
+        _prompt = EditorGUILayout.TextArea(_prompt, GUILayout.Height(100));
 
         if (GUILayout.Button("Check Connection"))
         {

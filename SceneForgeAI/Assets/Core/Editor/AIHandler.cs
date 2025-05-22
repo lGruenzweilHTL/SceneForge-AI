@@ -1,21 +1,31 @@
+using System.Collections.Generic;
+using Unity.Plastic.Newtonsoft.Json;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public static class AIHandler
 {
     private const string URL = "http://127.0.0.1:11434/";
+    private const string GenerateURL = URL + "api/chat";
+    
+    private static List<AIMessage> messages = new();
 
     public static string Prompt(string prompt)
     {
+        messages.Add(new AIMessage
+        {
+            role = "user",
+            content = prompt
+        });
         var body = new AIRequest
         {
             model = "gemma3:1b",
-            prompt = prompt,
+            messages = messages.ToArray(),
             stream = false
         };
-        var json = JsonUtility.ToJson(body);
-        const string url = URL + "api/generate";
-        var request = new UnityWebRequest(url, "POST");
+        var json = JsonConvert.SerializeObject(body);
+        var request = new UnityWebRequest(GenerateURL, "POST");
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
@@ -32,8 +42,19 @@ public static class AIHandler
             return null;
         }
 
-        var response = JsonUtility.FromJson<AIResponse>(request.downloadHandler.text);
-        return response.response;
+        var response = JsonConvert.DeserializeObject<AIResponse>(request.downloadHandler.text);
+        messages.Add(response.message);
+        return response.message.content;
+    }
+    
+    [MenuItem("Tools/List")]
+    public static void List()
+    {
+        foreach (var message in messages)
+        {
+
+            Debug.Log($"{message.role}: {message.content}");
+        }
     }
 
     public static bool CheckConnection()
