@@ -123,3 +123,27 @@ json
 
 Some more response text...
 ```
+
+### Creating new Objects
+
+Whenever the provided UID does not match any existing object, a new one will be automatically created.
+The response must include the scene path of the new object, which will be used to create the object in the scene.
+All other components or properties will be applied in diff format to a newly created component with default values.
+A Transform component will always be created for new objects, even if not specified in the response.
+
+Example:
+```json
+{
+  "new": {
+    "path": "Camera/NewObject",
+    "Image": {
+        "color": [1, 0, 0, 1]
+    },
+    "Transform": {
+      "position": [10, 20, 30],
+      "rotation": [0, 0, 0],
+      "scale": [1.5, 2, 1]
+    }
+  }
+}
+```

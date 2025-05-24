@@ -10,6 +10,7 @@ public static class AIHandler
 {
     private const string URL = "http://127.0.0.1:11434/";
     private const string GenerateURL = URL + "api/chat";
+    private const string Model = "sceneforge:1b";
 
     private static List<AIMessage> history = new()
     {
@@ -19,41 +20,6 @@ public static class AIHandler
             content = "Hello! I am Scene Forge AI. How can I assist you today?"
         }
     };
-
-    public static void Prompt(string prompt)
-    {
-        history.Add(new AIMessage
-        {
-            role = "user",
-            content = prompt
-        });
-        var body = new AIRequest
-        {
-            model = "gemma3:1b",
-            messages = history.ToArray(),
-            stream = false
-        };
-        var json = JsonConvert.SerializeObject(body);
-        var request = new UnityWebRequest(GenerateURL, "POST");
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
-        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = new DownloadHandlerBuffer();
-        request.SetRequestHeader("Content-Type", "application/json");
-        request.SendWebRequest();
-        while (!request.isDone)
-        {
-            // Wait for the request to complete
-        }
-
-        if (request.result is UnityWebRequest.Result.ConnectionError or UnityWebRequest.Result.ProtocolError)
-        {
-            Debug.LogError($"Error: {request.error}");
-            return;
-        }
-
-        var response = JsonConvert.DeserializeObject<AIResponse>(request.downloadHandler.text);
-        history.Add(response.message);
-    }
     
     public static void PromptStream(string prompt)
     {
@@ -65,7 +31,7 @@ public static class AIHandler
         history.Add(new AIMessage { role = "user", content = prompt });
         var body = new AIRequest
         {
-            model = "gemma3:1b",
+            model = Model,
             messages = history.ToArray(),
             stream = true
         };
