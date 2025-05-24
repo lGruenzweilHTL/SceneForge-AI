@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 public static class SceneDiffHandler
@@ -17,8 +17,13 @@ public static class SceneDiffHandler
         var objectLayer = JsonConvert.DeserializeObject<Dictionary<string, object>>(diff);
         foreach ((string uid, object componentData) in objectLayer)
         {
-            GameObject go = uidMap[uid];
-            ApplyDiffToObject(go, componentData.ToString());
+            if (!uidMap.TryGetValue(uid, out GameObject go))
+            {
+                go = CreateGameObjectFromComponentData(componentData);
+            }
+
+            if (go) ApplyDiffToObject(go, componentData.ToString());
+            else Debug.LogWarning($"GameObject with UID '{uid}' could not be created or found in the scene.");
         }
     }
 
@@ -28,8 +33,26 @@ public static class SceneDiffHandler
         var componentLayer = JsonConvert.DeserializeObject<Dictionary<string, object>>(diff);
         foreach ((string type, object propertyData) in componentLayer)
         {
-            Component component = go.GetComponent(type);
-            ApplyDiffToComponent(component, propertyData.ToString());
+            if (type is "name" or "parent")
+            {
+                // Skip name and parent properties, they are handled separately
+                continue;
+            }
+            
+            var componentType = FindType(type);
+            if (!go.TryGetComponent(componentType, out Component component))
+            {
+                // Create component if it doesn't exist
+                if (componentType == null)
+                {
+                    Debug.LogWarning($"Component type '{type}' not found.");
+                    continue;
+                }
+
+                component = go.AddComponent(componentType);
+            }
+
+            if (component) ApplyDiffToComponent(component, propertyData.ToString());
         }
     }
 
@@ -76,7 +99,8 @@ public static class SceneDiffHandler
                 var array = JsonConvert.DeserializeObject(value.ToString(), property.PropertyType);
                 property.SetValue(component, array);
             }
-            else if (property.PropertyType.IsGenericType && property.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
+            else if (property.PropertyType.IsGenericType &&
+                     property.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
             {
                 var listType = property.PropertyType.GetGenericArguments()[0];
                 var list = JsonConvert.DeserializeObject(value.ToString(), typeof(List<>).MakeGenericType(listType));
@@ -101,9 +125,10 @@ public static class SceneDiffHandler
         {
             throw new ArgumentException("Invalid Vector2 format");
         }
-        
+
         return new Vector2(vectorArray[0], vectorArray[1]);
     }
+
     private static Vector3 DeserializeVector3(string json)
     {
         var vectorArray = JsonConvert.DeserializeObject<float[]>(json);
@@ -111,7 +136,7 @@ public static class SceneDiffHandler
         {
             throw new ArgumentException("Invalid Vector3 format");
         }
-        
+
         return new Vector3(vectorArray[0], vectorArray[1], vectorArray[2]);
     }
 
@@ -125,4 +150,45 @@ public static class SceneDiffHandler
         
         return new Color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]);
     }
+
+    private static GameObject CreateGameObjectFromComponentData(object data)
+    {
+        var dataDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(data.ToString());
+        if (dataDict == null || !dataDict.ContainsKey("name"))
+        {
+            Debug.LogWarning("Invalid component data, cannot create GameObject.");
+            return null;
+        }
+
+        string name = dataDict.TryGetValue("name", out var nameObj) ? nameObj.ToString() : "New GameObject";
+        GameObject go = new GameObject(name);
+
+        if (dataDict.TryGetValue("parent", out var parentObj))
+        {
+            string parent = parentObj.ToString();
+            if (!string.IsNullOrEmpty(parent))
+            {
+                Transform parentTransform = GameObject.Find(parent)?.transform;
+                if (parentTransform)
+                {
+                    go.transform.SetParent(parentTransform);
+                }
+            }
+        }
+
+        return go;
+    }
+    
+    private static Type FindType(string typeName)
+    {
+        Type type = Type.GetType(typeName, false, true);
+        if (type == null)
+        {
+            type = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .FirstOrDefault(t => t.FullName == typeName || t.Name == typeName);
+        }
+
+        return type;
+    } 
 }
