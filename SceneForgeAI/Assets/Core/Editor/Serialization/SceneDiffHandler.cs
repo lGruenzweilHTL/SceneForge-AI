@@ -19,10 +19,14 @@ public static class SceneDiffHandler
         {
             if (!uidMap.TryGetValue(uid, out GameObject go))
             {
-                go = CreateGameObjectFromComponentData(componentData);
+                go = CreateGameObjectFromComponentData(componentData, uidMap);
             }
 
-            if (go) ApplyDiffToObject(go, componentData.ToString());
+            if (go)
+            {
+                ApplyDiffToObject(go, componentData.ToString());
+                uidMap.Add(uid, go);
+            }
             else Debug.LogWarning($"GameObject with UID '{uid}' could not be created or found in the scene.");
         }
     }
@@ -151,7 +155,7 @@ public static class SceneDiffHandler
         return new Color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]);
     }
 
-    private static GameObject CreateGameObjectFromComponentData(object data)
+    private static GameObject CreateGameObjectFromComponentData(object data, Dictionary<string, GameObject> uidMap)
     {
         var dataDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(data.ToString());
         if (dataDict == null || !dataDict.ContainsKey("name"))
@@ -165,15 +169,20 @@ public static class SceneDiffHandler
 
         if (dataDict.TryGetValue("parent", out var parentObj))
         {
-            string parent = parentObj.ToString();
-            if (!string.IsNullOrEmpty(parent))
+            string parentUid = parentObj.ToString();
+            if (!uidMap.TryGetValue(parentUid, out GameObject parentGo))
             {
-                Transform parentTransform = GameObject.Find(parent)?.transform;
-                if (parentTransform)
-                {
-                    go.transform.SetParent(parentTransform);
-                }
+                Debug.LogWarning($"Parent GameObject with UID '{parentUid}' not found.");
             }
+            else
+            {
+                go.transform.SetParent(parentGo.transform);
+            }
+        }
+        else
+        {
+            Debug.Log($"No parent specified for GameObject with name {name}, it will be a root object.");
+            go.transform.SetParent(null);
         }
 
         return go;
