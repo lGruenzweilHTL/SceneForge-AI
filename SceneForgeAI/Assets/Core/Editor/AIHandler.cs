@@ -1,6 +1,6 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
@@ -10,7 +10,9 @@ public static class AIHandler
 {
     private const string URL = "http://127.0.0.1:11434/";
     private const string GenerateURL = URL + "api/chat";
-    private const string Model = "sceneforge:1b";
+    private const string Model = "mistral";
+    
+    private static string _mostRecentDiff = "";
 
     private static List<AIMessage> history = new()
     {
@@ -28,7 +30,16 @@ public static class AIHandler
 
     private static IEnumerator StreamCoroutine(string prompt)
     {
-        history.Add(new AIMessage { role = "user", content = prompt });
+        var sceneJson = JsonConvert.SerializeObject(new
+        {
+            uidMap = GameObjectSerializer.SerializeSelection()
+        }, Formatting.None);
+        history.Add(new AIMessage
+        {
+            role = "user", 
+            content = "Scene JSON: " 
+            + sceneJson + "\n\nUser Prompt: " + prompt
+        });
         var body = new AIRequest
         {
             model = Model,
@@ -56,6 +67,18 @@ public static class AIHandler
                 msg.content += token;
             }
             yield return null;
+        }
+        
+        var startIndex = msg.content.IndexOf("```json", StringComparison.Ordinal) + 7;
+        var endIndex = msg.content.IndexOf("```", startIndex, StringComparison.Ordinal);
+        if (startIndex >= 0 && endIndex > startIndex)
+        {
+            _mostRecentDiff = msg.content.Substring(startIndex, endIndex - startIndex).Trim();
+            EditorUtility.DisplayDialog("AI Response", _mostRecentDiff, "OK");
+        }
+        else
+        {
+            Debug.LogWarning("No valid JSON diff found in the response.");
         }
     }
     

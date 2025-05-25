@@ -156,6 +156,7 @@ Some more response text...
 Whenever the provided UID does not match any existing object, a new one will be automatically created.
 The newly created object will be added to the UID Map and will be available to use in the same response.
 The response must include the uid of the new object's parent, which will be used to create the object in the scene.
+If no parent is specified, the new object will be created at the root of the scene.
 All other components or properties will be applied in diff format to a newly created component with default values.
 A Transform component will always be created for new objects, even if not specified in the response.
 

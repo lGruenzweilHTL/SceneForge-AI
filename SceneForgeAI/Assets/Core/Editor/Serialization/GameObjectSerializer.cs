@@ -6,19 +6,22 @@ using UnityEngine;
 
 public static class GameObjectSerializer
 {
-    public static string SerializeSelection()
+    public static object SerializeSelection()
     {
         var selectedObjects = Selection.gameObjects;
         var serializedObject = selectedObjects
-            .Select(SerializeObject);
-        
-        return JsonConvert.SerializeObject(serializedObject);
+            .Select((obj, idx) => new {obj = SerializeObject(obj, idx.ToString()), uid = idx.ToString()});
+        var dictionary = serializedObject
+            .ToDictionary(pair => pair.uid, pair => pair.obj);
+
+        return dictionary;
     }
 
-    private static object SerializeObject(GameObject obj)
+    private static object SerializeObject(GameObject obj, string uid)
     {
         return new
         {
+            uid = uid,
             name = obj.name,
             active = obj.activeSelf,
             tag = obj.tag,
@@ -48,11 +51,9 @@ public static class GameObjectSerializer
     
     private static object SerializableVector3(Vector3 vector)
     {
-        return new
+        return new[]
         {
-            x = vector.x,
-            y = vector.y,
-            z = vector.z
+            vector.x, vector.y, vector.z
         };
     }
 }

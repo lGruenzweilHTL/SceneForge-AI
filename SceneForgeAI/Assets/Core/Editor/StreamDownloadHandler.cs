@@ -14,7 +14,7 @@ public class StreamDownloadHandler : DownloadHandlerScript
             if (!string.IsNullOrWhiteSpace(line))
             {
                 var response = JsonConvert.DeserializeObject<AIStreamResponse>(line);
-                tokens.Enqueue(response.message.content);
+                if (response.message != null) tokens.Enqueue(response.message.content);
             }
         }
         return true;
