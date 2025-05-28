@@ -34,8 +34,7 @@ public class SceneDiffTester : EditorWindow
 
         if (GUILayout.Button("Apply Diff"))
         {
-            var scene = SceneManager.GetActiveScene();
-            SceneDiffHandler.ApplyDiffToScene(scene, diff, uidMap);
+            SceneDiffHandler.ApplyDiffToScene(diff, uidMap);
         }
     }
     

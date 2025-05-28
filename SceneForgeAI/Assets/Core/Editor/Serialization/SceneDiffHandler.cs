@@ -11,7 +11,7 @@ public static class SceneDiffHandler
     // 1. UID (game object)
     // 2. Component (type, properties)
     // 3. Properties (name, value)
-    public static void ApplyDiffToScene(Scene scene, string diff, Dictionary<string, GameObject> uidMap)
+    public static void ApplyDiffToScene(string diff, Dictionary<string, GameObject> uidMap)
     {
         // Layer 1: Game Object
         var objectLayer = JsonConvert.DeserializeObject<Dictionary<string, object>>(diff);

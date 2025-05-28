@@ -6,6 +6,14 @@ using UnityEngine;
 
 public static class GameObjectSerializer
 {
+    [MenuItem("Tools/Serialize Selection")]
+    public static void SerializeSelectionMenu()
+    {
+        var serializedData = SerializeSelection();
+        var json = JsonConvert.SerializeObject(serializedData, Formatting.Indented);
+        Debug.Log(json);
+    }
+    
     public static object SerializeSelection()
     {
         var selectedObjects = Selection.gameObjects;
