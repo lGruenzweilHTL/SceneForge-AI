@@ -20,12 +20,12 @@ public static class SceneDiffHandler
             if (!uidMap.TryGetValue(uid, out GameObject go))
             {
                 go = CreateGameObjectFromComponentData(componentData, uidMap);
+                uidMap.Add(uid, go);
             }
 
             if (go)
             {
                 ApplyDiffToObject(go, componentData.ToString());
-                uidMap.Add(uid, go);
             }
             else Debug.LogWarning($"GameObject with UID '{uid}' could not be created or found in the scene.");
         }
@@ -44,6 +44,7 @@ public static class SceneDiffHandler
             }
             
             var componentType = FindType(type);
+            Debug.Log($"{type}: {componentType}");
             if (!go.TryGetComponent(componentType, out Component component))
             {
                 // Create component if it doesn't exist
