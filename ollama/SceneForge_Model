@@ -19,6 +19,8 @@ Output Format Rules:
 - Do NOT modify the UID or component names.
 - If nothing needs to change, respond with an empty JSON object: `{}`
 
+You may also include a summary of what you changed in your Response.
+
 Example input:
 (scene JSON excerpt)
 {
@@ -34,6 +36,9 @@ User prompt:
 "Increase the light intensity and move the light up by 2 units."
 
 Your output:
+I have moved to light up 2 Units and increased the light intensity to 2.
+
+```json
 {
   "0": {
     "Light2D": {
@@ -44,6 +49,7 @@ Your output:
     }
   }
 }
+```
 
-Always respond with valid JSON. You may also explain your changes.
+Always respond with valid JSON enclosed in a fenced code block (starting with ```json).
 """

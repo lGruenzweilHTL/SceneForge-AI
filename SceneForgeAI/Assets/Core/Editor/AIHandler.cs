@@ -37,10 +37,10 @@ public static class AIHandler
     
     public static void PromptStream(string prompt)
     {
-        EditorCoroutineRunner.StartCoroutine(StreamCoroutine(prompt));
+        EditorCoroutineRunner.StartCoroutine(StreamCoroutine(prompt, Selection.gameObjects));
     }
 
-    private static IEnumerator StreamCoroutine(string prompt)
+    private static IEnumerator StreamCoroutine(string prompt, GameObject[] selection = null)
     {
         var sceneJson = JsonConvert.SerializeObject(new
         {
@@ -86,21 +86,22 @@ public static class AIHandler
         if (startIndex >= 0 && endIndex > startIndex)
         {
             _mostRecentDiff = msg.content.Substring(startIndex, endIndex - startIndex).Trim();
-            ApplyDiff(_mostRecentDiff);
+            SceneDiffHandler.ApplyDiffToScene(_mostRecentDiff, BuildUidMap(selection));
         }
         else
         {
             Debug.LogWarning("No valid JSON diff found in the response.");
         }
     }
-
-    private static void ApplyDiff(string diff)
+    
+    private static Dictionary<string, GameObject> BuildUidMap(GameObject[] selection = null)
     {
-        SceneDiffHandler.ApplyDiffToScene(diff, GetUidMap());
-    }
-    private static Dictionary<string, GameObject> GetUidMap()
-    {
-        return Selection.gameObjects
+        if (selection == null || selection.Length == 0)
+        {
+            selection = Selection.gameObjects;
+        }
+        
+        return selection
             .Select((obj, idx) => new { obj, index = idx })
             .ToDictionary(pair => pair.index.ToString(), pair => pair.obj);
     }
