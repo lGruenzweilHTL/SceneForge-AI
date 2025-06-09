@@ -66,93 +66,25 @@ public static class SceneDiffHandler
         var propertyLayer = JsonConvert.DeserializeObject<Dictionary<string, object>>(diff);
         foreach ((string propertyName, object value) in propertyLayer)
         {
-            var property = component.GetType().GetProperty(propertyName);
-            if (property == null || !property.CanWrite) continue;
-
-            if (property.PropertyType.IsPrimitive || property.PropertyType == typeof(string))
+            var property = component.GetType().GetProperty(propertyName)
+                           ?? throw new Exception($"Property '{propertyName}' not found.");
+            var deserializedValue = Deserializers.Property(property.PropertyType, value);
+            if (property.CanWrite)
             {
-                property.SetValue(component, Convert.ChangeType(value, property.PropertyType));
-            }
-            else if (property.PropertyType == typeof(Vector2))
-            {
-                var vector = DeserializeVector2(value.ToString());
-                property.SetValue(component, vector);
-            }
-            else if (property.PropertyType == typeof(Vector3))
-            {
-                var vector = DeserializeVector3(value.ToString());
-                property.SetValue(component, vector);
-            }
-            else if (property.PropertyType == typeof(Quaternion))
-            {
-                var eulerAngles = DeserializeVector3(value.ToString());
-                property.SetValue(component, Quaternion.Euler(eulerAngles));
-            }
-            else if (property.PropertyType == typeof(Color))
-            {
-                var color = DeserializeColor(value.ToString());
-                property.SetValue(component, color);
-            }
-            else if (property.PropertyType.IsEnum)
-            {
-                var enumValue = Enum.Parse(property.PropertyType, value.ToString());
-                property.SetValue(component, enumValue);
-            }
-            else if (property.PropertyType.IsArray)
-            {
-                var array = JsonConvert.DeserializeObject(value.ToString(), property.PropertyType);
-                property.SetValue(component, array);
-            }
-            else if (property.PropertyType.IsGenericType &&
-                     property.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
-            {
-                var listType = property.PropertyType.GetGenericArguments()[0];
-                var list = JsonConvert.DeserializeObject(value.ToString(), typeof(List<>).MakeGenericType(listType));
-                property.SetValue(component, list);
-            }
-            else if (property.PropertyType == typeof(Dictionary<string, object>))
-            {
-                var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(value.ToString());
-                property.SetValue(component, dictionary);
+                try
+                {
+                    property.SetValue(component, deserializedValue);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"Failed to set property '{propertyName}' on component '{component.GetType().Name}': {ex.Message}");
+                }
             }
             else
             {
-                Debug.LogWarning($"Unsupported property type: {property.PropertyType}");
+                Debug.LogWarning($"Property '{propertyName}' not found or not writable on component '{component.GetType().Name}'.");
             }
         }
-    }
-
-    private static Vector2 DeserializeVector2(string json)
-    {
-        var vectorArray = JsonConvert.DeserializeObject<float[]>(json);
-        if (vectorArray.Length != 2)
-        {
-            throw new ArgumentException("Invalid Vector2 format");
-        }
-
-        return new Vector2(vectorArray[0], vectorArray[1]);
-    }
-
-    private static Vector3 DeserializeVector3(string json)
-    {
-        var vectorArray = JsonConvert.DeserializeObject<float[]>(json);
-        if (vectorArray.Length != 3)
-        {
-            throw new ArgumentException("Invalid Vector3 format");
-        }
-
-        return new Vector3(vectorArray[0], vectorArray[1], vectorArray[2]);
-    }
-
-    private static Color DeserializeColor(string json)
-    {
-        var colorArray = JsonConvert.DeserializeObject<float[]>(json);
-        return colorArray.Length switch
-        {
-            4 => new Color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]),
-            3 => new Color(colorArray[0], colorArray[1], colorArray[2]),
-            _ => throw new ArgumentException("Invalid Color format")
-        };
     }
 
     private static GameObject CreateGameObjectFromComponentData(object data, Dictionary<string, GameObject> uidMap)
