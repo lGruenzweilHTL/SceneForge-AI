@@ -90,7 +90,7 @@ public static class SceneDiffHandler
             }
             else if (property.PropertyType == typeof(Color))
             {
-                var color = DeserializeColorRgba(value.ToString());
+                var color = DeserializeColor(value.ToString());
                 property.SetValue(component, color);
             }
             else if (property.PropertyType.IsEnum)
@@ -144,15 +144,15 @@ public static class SceneDiffHandler
         return new Vector3(vectorArray[0], vectorArray[1], vectorArray[2]);
     }
 
-    private static Color DeserializeColorRgba(string json)
+    private static Color DeserializeColor(string json)
     {
         var colorArray = JsonConvert.DeserializeObject<float[]>(json);
-        if (colorArray.Length != 4)
+        return colorArray.Length switch
         {
-            throw new ArgumentException("Invalid Color format");
-        }
-        
-        return new Color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]);
+            4 => new Color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]),
+            3 => new Color(colorArray[0], colorArray[1], colorArray[2]),
+            _ => throw new ArgumentException("Invalid Color format")
+        };
     }
 
     private static GameObject CreateGameObjectFromComponentData(object data, Dictionary<string, GameObject> uidMap)

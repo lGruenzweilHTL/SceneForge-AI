@@ -1,8 +1,10 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 public static class GameObjectSerializer
 {
@@ -44,11 +46,9 @@ public static class GameObjectSerializer
                     .GetProperties()
                     .Where(p => p.CustomAttributes.All(a => a.AttributeType != typeof(ObsoleteAttribute)))
                     .Where(p => p.CanRead && p.CanWrite)
-                    .Where(p => p.PropertyType.IsPrimitive || p.PropertyType == typeof(string) || p.PropertyType == typeof(Vector3))
-                    .ToDictionary(p => p.Name, p => p.PropertyType != typeof(Vector3) ? p.GetValue(c)
-                        : p.GetValue(c) is Vector3 vector3 ? SerializableVector3(vector3) : null)
+                    .ToDictionary(p => p.Name, p => SerializeProperty(p, c))
             }).ToArray(),
-            transform = new
+            Transform = new
             {
                 position = SerializableVector3(obj.transform.position),
                 rotation = SerializableVector3(obj.transform.rotation.eulerAngles),
@@ -56,12 +56,63 @@ public static class GameObjectSerializer
             }
         };
     }
-    
+
+    private static object SerializeProperty(PropertyInfo prop, object obj)
+    {
+        if (prop.PropertyType == typeof(Vector3))
+        {
+            return SerializableVector3((Vector3)prop.GetValue(obj));
+        }
+        if (prop.PropertyType == typeof(Vector2))
+        {
+            return SerializableVector2((Vector2)prop.GetValue(obj));
+        }
+        if (prop.PropertyType == typeof(Quaternion))
+        {
+            return SerializableQuaternion((Quaternion)prop.GetValue(obj));
+        }
+        if (prop.PropertyType == typeof(Color))
+        {
+            return SerializableColor((Color)prop.GetValue(obj));
+        }
+        if (prop.PropertyType.IsEnum)
+        {
+            return prop.GetValue(obj).ToString();
+        }
+        if (prop.PropertyType == typeof(LayerMask))
+        {
+            return ((LayerMask)prop.GetValue(obj)).value;
+        }
+        if (prop.PropertyType.IsPrimitive || prop.PropertyType == typeof(string))
+        {
+            return prop.GetValue(obj);
+        }
+        Debug.LogWarning($"Property {prop.Name} of type {prop.PropertyType} is not currently serializable.");
+        return "Unsupported Type";
+    }
     private static object SerializableVector3(Vector3 vector)
     {
         return new[]
         {
             vector.x, vector.y, vector.z
+        };
+    }
+    private static object SerializableVector2(Vector2 vector)
+    {
+        return new[]
+        {
+            vector.x, vector.y
+        };
+    }
+    private static object SerializableQuaternion(Quaternion quaternion)
+    {
+        return SerializableVector3(quaternion.eulerAngles);
+    }
+    private static object SerializableColor(Color color)
+    {
+        return new[]
+        {
+            color.r, color.g, color.b, color.a
         };
     }
 }

@@ -42,10 +42,7 @@ public static class AIHandler
 
     private static IEnumerator StreamCoroutine(string prompt, GameObject[] selection = null)
     {
-        var sceneJson = JsonConvert.SerializeObject(new
-        {
-            uidMap = GameObjectSerializer.SerializeSelection()
-        }, Formatting.None);
+        var sceneJson = JsonConvert.SerializeObject(GameObjectSerializer.SerializeSelection(), Formatting.None);
         _currentChat.History.Add(new AIMessage
         {
             role = "user", 
@@ -83,7 +80,7 @@ public static class AIHandler
         
         var startIndex = msg.content.IndexOf("```json", StringComparison.Ordinal) + 7;
         var endIndex = msg.content.IndexOf("```", startIndex, StringComparison.Ordinal);
-        if (startIndex >= 0 && endIndex > startIndex)
+        if (startIndex >= 7 && endIndex > startIndex)
         {
             _mostRecentDiff = msg.content.Substring(startIndex, endIndex - startIndex).Trim();
             SceneDiffHandler.ApplyDiffToScene(_mostRecentDiff, BuildUidMap(selection));
