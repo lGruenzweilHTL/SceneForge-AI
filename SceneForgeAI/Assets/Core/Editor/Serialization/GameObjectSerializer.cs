@@ -44,13 +44,20 @@ public static class GameObjectSerializer
                     .GetProperties()
                     .Where(p => p.CustomAttributes.All(a => a.AttributeType != typeof(ObsoleteAttribute)))
                     .Where(p => p.Name != "material" && p.Name != "materials") // Instance materials should not be serialized in edit mode
-                    .Where(p => p.CanRead && p.CanWrite)
-                    .Select(p => new
+                    .Where(p => p.CanRead && p.CanWrite)    
+                    .Select(p =>
                     {
-                        Name = p.Name,
-                        Value = Serializers.Property(p.PropertyType, p.GetValue(c))
+                        if (p.Name == "lightCookieSprite")
+                        {
+                            int i = 42;
+                        }
+                        return new
+                        {
+                            Name = p.Name,
+                            Value = Serializers.Property(p.PropertyType, p.GetValue(c))
+                        };
                     })
-                    .Where(p => p.Value != null)
+                    .Where(p => p?.Value != null)
                     .ToDictionary(p => p.Name, p => p.Value)
             }).ToArray(),
             Transform = Serializers.Transform(obj.transform)

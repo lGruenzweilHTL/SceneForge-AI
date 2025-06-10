@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public static class Serializers
 {
@@ -19,7 +19,6 @@ public static class Serializers
         if (type == typeof(Vector3Int)) return Vector3Int((Vector3Int)value);
         if (type == typeof(Bounds)) return Bounds((Bounds)value);
         if (type == typeof(BoundsInt)) return BoundsInt((BoundsInt)value);
-        if (type == typeof(Transform)) return Transform((Transform)value);
         if (type == typeof(Quaternion)) return Quaternion((Quaternion)value);
         if (type == typeof(Color)) return Color((Color)value);
         if (type == typeof(Color32)) return Color32((Color32)value);
@@ -29,7 +28,6 @@ public static class Serializers
         if (type == typeof(LayerMask)) return LayerMask((LayerMask)value);
         if (type == typeof(AnimationCurve)) return AnimationCurve((AnimationCurve)value);
         if (type == typeof(Gradient)) return Gradient((Gradient)value);
-        if (type == typeof(Sprite)) return Sprite((Sprite)value);
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
         {
             return Property(type.GetGenericArguments()[0], value);
@@ -47,7 +45,18 @@ public static class Serializers
             return result;
         }
         
+        // The unity objects that need special treatment
+        if (!IsUnityObjectAlive(value)) return null; // manually perform object lifetime checks
+        if (type == typeof(Sprite)) return Sprite((Sprite)value);
+        if (type == typeof(Transform)) return Transform((Transform)value);
+        
         return null;
+    }
+
+    private static bool IsUnityObjectAlive(object o)
+    {
+        if (o is Object unityObject) return (bool)unityObject;
+        return false;
     }
     
     public static object Vector2(Vector2 vec) => new[]

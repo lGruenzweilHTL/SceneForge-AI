@@ -43,7 +43,6 @@ public static class SceneDiffHandler
             }
             
             var componentType = FindType(type);
-            Debug.Log($"{type}: {componentType}");
             if (!go.TryGetComponent(componentType, out Component component))
             {
                 // Create component if it doesn't exist
