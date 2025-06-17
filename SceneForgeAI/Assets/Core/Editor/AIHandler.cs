@@ -47,7 +47,7 @@ public static class AIHandler
         {
             role = "user", 
             content = "Scene JSON: " 
-            + sceneJson + "\n\nUser Prompt: " + prompt
+            + sceneJson + "\n\nUser Prompt: " + prompt,
         });
         var body = new AIRequest
         {
@@ -83,7 +83,7 @@ public static class AIHandler
         if (startIndex >= 7 && endIndex > startIndex)
         {
             _mostRecentDiff = msg.content.Substring(startIndex, endIndex - startIndex).Trim();
-            SceneDiffHandler.ApplyDiffToScene(_mostRecentDiff, BuildUidMap(selection));
+            DiffViewerEditorWindow.ShowWindow(BuildUidMap(selection), _mostRecentDiff);
         }
         else
         {
