@@ -122,7 +122,7 @@ public class DiffViewerEditorWindow : EditorWindow
 
         var goGroups = _diffs
             .Select((d, idx) => (diff: d, idx))
-            .GroupBy(pair => pair.diff.GameObject)
+            .GroupBy(pair => pair.diff.GameObject ?? pair.diff.Component?.gameObject)
             .ToList();
 
         foreach (var goGroup in goGroups)
@@ -226,12 +226,12 @@ public class DiffViewerEditorWindow : EditorWindow
                 EditorGUILayout.LabelField("Old:", GUILayout.Width(30));
                 GUI.contentColor = Color.yellow;
                 EditorGUILayout.LabelField(diff.OldValue?.ToString() ?? "null",
-                    GUILayout.Width(130));
+                    GUILayout.MaxWidth(175));
                 GUI.contentColor = Color.white;
                 EditorGUILayout.LabelField("New:", GUILayout.Width(30));
                 GUI.contentColor = Color.green;
                 EditorGUILayout.LabelField(diff.NewValue?.ToString() ?? "null",
-                    GUILayout.Width(130));
+                    GUILayout.MaxWidth(175));
                 GUI.contentColor = Color.white;
                 break;
             case SceneDiffType.AddComponent:
@@ -259,9 +259,18 @@ public class DiffViewerEditorWindow : EditorWindow
         _diffs = diff
             .Where(d => d.OldValue != d.NewValue || d.OldValue == null || d.NewValue == null)
             .ToArray();
-        _selectedDiffs = _diffs.Select((_, i) => new { i }).ToDictionary(x => x.i, x => true);
+        _selectedDiffs = _diffs
+            .Select((_, i) => i)
+            .ToDictionary(i => i, i => true);
         _goFoldouts.Clear();
         _compFoldouts.Clear();
+        
+        // Initialize game object and componentType for each diff
+        foreach (var sceneDiff in _diffs)
+        {
+            sceneDiff.GameObject ??= sceneDiff.Component?.gameObject;
+            sceneDiff.ComponentType ??= sceneDiff.Component?.GetType();
+        }
     }
 
     private void ApplySelectedDiffs()
