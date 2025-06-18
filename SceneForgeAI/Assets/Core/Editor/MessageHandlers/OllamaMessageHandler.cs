@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using Unity.Plastic.Newtonsoft.Json;
@@ -14,8 +16,8 @@ public class OllamaMessageHandler : IMessageHandler
     private const string Endpoint = "http://127.0.0.1:11434/api/chat";
 
     public string Model { get; set; }
-
-    public async Task<string> GetChatCompletion(AIMessage[] history)
+    
+    public IEnumerator GetChatCompletion(AIMessage[] history, Action<string> callback)
     {
         var body = new AIRequest
         {
@@ -28,18 +30,23 @@ public class OllamaMessageHandler : IMessageHandler
         var request = new UnityWebRequest(Endpoint, "POST");
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-        var streamHandler = new DownloadHandlerBuffer();
+        request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
 
-        await request.SendWebRequest();
+        var op = request.SendWebRequest();
+        while (!op.isDone)
+        {
+            yield return null; // Wait for the request to complete
+        }
         
         if (request.result == UnityWebRequest.Result.Success)
         {
-            var response = JsonConvert.DeserializeObject<GroqResponse>(request.downloadHandler.text);
-            return response.Choices.FirstOrDefault()?.Message.Content ?? "No response from AI.";
+            var response = JsonConvert.DeserializeObject<AIResponse>(request.downloadHandler.text);
+            callback(response.message.content);
+            yield break; // Exit the coroutine on success
         }
        
         Debug.LogError($"Error sending message: {request.error}");
-        return $"Error: {request.error}";
+        callback($"Error: {request.error}");
     }
 }

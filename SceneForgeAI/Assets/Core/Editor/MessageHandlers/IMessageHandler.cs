@@ -1,5 +1,5 @@
-using System.Threading.Tasks;
-using JetBrains.Annotations;
+using System;
+using System.Collections;
 
 public interface IMessageHandler
 {
@@ -9,6 +9,7 @@ public interface IMessageHandler
     /// Sends a message to the AI and returns the response.
     /// </summary>
     /// <param name="history">The chat history to complete.</param>
-    /// <returns>The AI's response.</returns>
-    Task<string> GetChatCompletion(AIMessage[] history);
+    /// <param name="callback">The callback invoked when the request is finished</param>
+    /// <returns>A coroutine</returns>
+    IEnumerator GetChatCompletion(AIMessage[] history, Action<string> callback);
 }

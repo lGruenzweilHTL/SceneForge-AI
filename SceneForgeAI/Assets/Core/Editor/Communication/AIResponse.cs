@@ -1,5 +1,3 @@
-using Unity.Plastic.Newtonsoft.Json;
-
 public class AIResponse
 {
     public string model { get; set; }
@@ -9,8 +7,8 @@ public class AIResponse
     public bool done { get; set; }
     public ulong total_duration { get; set; }
     public ulong load_duration { get; set; }
-    public int prompt_eval_count { get; set; }
-    public int prompt_eval_duration { get; set; }
-    public int eval_count { get; set; }
+    public ulong prompt_eval_count { get; set; }
+    public ulong prompt_eval_duration { get; set; }
+    public ulong eval_count { get; set; }
     public ulong eval_duration { get; set; }
 }

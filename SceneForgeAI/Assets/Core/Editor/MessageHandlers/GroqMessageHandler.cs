@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using Unity.Plastic.Newtonsoft.Json;
@@ -16,8 +18,8 @@ public class GroqMessageHandler : IMessageHandler
 
     public string Model { get; set; }
     private readonly string _key;
-
-    public async Task<string> GetChatCompletion(AIMessage[] history)
+    
+    public IEnumerator GetChatCompletion(AIMessage[] history, Action<string> callback)
     {
         var body = new AIRequest
         {
@@ -34,17 +36,20 @@ public class GroqMessageHandler : IMessageHandler
         request.SetRequestHeader("Content-Type", "application/json");
         request.SetRequestHeader("Authorization", "Bearer " + _key);
 
-        var operation = request.SendWebRequest();
-        while (!operation.isDone)
-            await Task.Yield();
+        var op = request.SendWebRequest();
+        while (!op.isDone)
+        {
+            yield return null; // Wait for the request to complete
+        }
         
         if (request.result == UnityWebRequest.Result.Success)
         {
             var response = JsonConvert.DeserializeObject<GroqResponse>(request.downloadHandler.text);
-            return response.Choices.FirstOrDefault()?.Message.Content ?? "No response from AI.";
+            callback(response.Choices.FirstOrDefault()?.Message.Content ?? "No response from AI.");
+            yield break; // Exit the coroutine on success
         }
        
         Debug.LogError($"Error sending message: {request.error}");
-        return $"Error: {request.error}";
+        callback($"Error: {request.error}");
     }
 }

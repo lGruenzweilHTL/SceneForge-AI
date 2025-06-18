@@ -16,7 +16,7 @@ public static class AIHandler
         {
             Name = "New Chat",
             History = new List<AIMessage> { Greeting },
-            MessageHandler = new GroqMessageHandler(Secrets.GroqApiKey)
+            MessageHandler = new OllamaMessageHandler()
         }
     };
 
@@ -33,15 +33,18 @@ public static class AIHandler
         };
         _currentChat.History.Add(msg);
         var handler = _currentChat.MessageHandler;
-        var responseText = handler.GetChatCompletion(_currentChat.History.ToArray()).GetAwaiter().GetResult();
-        var response = new AIMessage
-        {
-            role = "assistant",
-            content = responseText,
-        };
-        _currentChat.History.Add(response);
-        
-        ResponseHandler.HandleResponse(responseText);
+        EditorCoroutineRunner.StartCoroutine(handler.GetChatCompletion(_currentChat.History.ToArray(),
+            responseText =>
+            {
+                var response = new AIMessage
+                {
+                    role = "assistant",
+                    content = responseText,
+                };
+                _currentChat.History.Add(response);
+                
+                ResponseHandler.HandleResponse(responseText);
+            }));
     }
     
     public static AIMessage[] GetCurrentChatHistory()
