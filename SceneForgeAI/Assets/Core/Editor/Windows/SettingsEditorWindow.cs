@@ -1,4 +1,5 @@
 // SceneForgeAI/Assets/Core/Editor/Windows/SettingsEditorWindow.cs
+
 using UnityEditor;
 using UnityEngine;
 
@@ -6,6 +7,21 @@ public class SettingsEditorWindow : EditorWindow
 {
     private readonly string[] tabs = { "General", "API Keys", "Advanced" };
     private int selectedTab = 0;
+
+    private static readonly GUIStyle headerStyle = new GUIStyle(EditorStyles.label)
+    {
+        fontSize = 20,
+        alignment = TextAnchor.MiddleCenter,
+        fontStyle = FontStyle.Bold
+    };
+
+
+    private static readonly GUIStyle subheaderStyle = new GUIStyle(EditorStyles.label)
+    {
+        fontSize = 16,
+        alignment = TextAnchor.MiddleLeft,
+        fontStyle = FontStyle.Bold,
+    };
 
     [MenuItem("Tools/SceneForge AI Settings")]
     public static void ShowWindow()
@@ -15,14 +31,9 @@ public class SettingsEditorWindow : EditorWindow
         window.Show();
     }
 
-    private void OnEnable()
-    {
-        // Optionally, load settings here if needed
-    }
-
     private void OnGUI()
     {
-        GUILayout.Label("Scene Forge AI Settings", EditorStyles.boldLabel);
+        GUILayout.Label("Scene Forge AI Settings", headerStyle);
         GUILayout.Space(20);
 
         selectedTab = GUILayout.Toolbar(selectedTab, tabs);
@@ -43,7 +54,7 @@ public class SettingsEditorWindow : EditorWindow
     private void DrawGeneralSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("General Settings", EditorStyles.boldLabel);
+        GUILayout.Label("General Settings", subheaderStyle);
 
         AISettings.AIType = (AIType)EditorGUILayout.EnumPopup("AI Type", AISettings.AIType);
         switch (AISettings.AIType)
@@ -63,7 +74,7 @@ public class SettingsEditorWindow : EditorWindow
     private void DrawApiKeysSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("API Keys", EditorStyles.boldLabel);
+        GUILayout.Label("API Keys", subheaderStyle);
 
         EditorGUILayout.BeginVertical(GUI.skin.box);
         AISettings.OpenAIApiKey = EditorGUILayout.TextField("OpenAI API Key", AISettings.OpenAIApiKey);
@@ -75,7 +86,7 @@ public class SettingsEditorWindow : EditorWindow
     private void DrawAdvancedSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("Advanced Settings", EditorStyles.boldLabel);
+        GUILayout.Label("Advanced Settings", subheaderStyle);
 
         AISettings.MaxErrorRetries = EditorGUILayout.IntField("Max Error Retries", AISettings.MaxErrorRetries);
     }
