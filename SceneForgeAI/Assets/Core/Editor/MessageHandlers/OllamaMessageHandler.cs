@@ -8,12 +8,13 @@ using UnityEngine.Networking;
 
 public class OllamaMessageHandler : IMessageHandler
 {
-    public OllamaMessageHandler(string model = "sceneforge")
+    public OllamaMessageHandler(string url = "http://127.0.0.1:11434", string model = "sceneforge")
     {
         Model = model;
+        _endpoint = url.EndsWith("/") ? url + "api/chat" : url + "/api/chat";
     }
 
-    private const string Endpoint = "http://127.0.0.1:11434/api/chat";
+    private readonly string _endpoint;
 
     public string Model { get; set; }
     
@@ -27,7 +28,7 @@ public class OllamaMessageHandler : IMessageHandler
         };
 
         var json = JsonConvert.SerializeObject(body);
-        var request = new UnityWebRequest(Endpoint, "POST");
+        var request = new UnityWebRequest(_endpoint, "POST");
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();

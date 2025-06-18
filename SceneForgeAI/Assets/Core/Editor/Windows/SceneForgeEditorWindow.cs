@@ -33,7 +33,7 @@ public class SceneForgeEditorWindow : EditorWindow
         GUILayout.FlexibleSpace();
         if (GUILayout.Button("New Chat", GUILayout.Width(125)))
         {
-            AIHandler.NewChat(new OllamaMessageHandler(), "Chat" + chats.Length);
+            AIHandler.NewChat("Chat" + chats.Length);
             _currentChatIndex = chats.Length - 1; // Set to the new chat
             _scrollPosition = Vector2.zero; // Reset scroll position
         }

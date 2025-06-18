@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Plastic.Newtonsoft.Json;
 
@@ -16,7 +17,7 @@ public static class AIHandler
         {
             Name = "New Chat",
             History = new List<AIMessage> { Greeting },
-            MessageHandler = new GroqMessageHandler(Secrets.GroqApiKey)
+            MessageHandler = new GroqMessageHandler(AISettings.GroqApiKey)
         }
     };
 
@@ -58,13 +59,13 @@ public static class AIHandler
         _currentChat = _chats[index];
     }
 
-    public static Chat NewChat(IMessageHandler messageHandler, string name = null, bool updateCurrent = true)
+    public static Chat NewChat(string name = null, IMessageHandler messageHandler = null, bool updateCurrent = true)
     {
         var c = new Chat
         {
             Name = name ?? "New Chat",
             History = new List<AIMessage> { Greeting },
-            MessageHandler = messageHandler
+            MessageHandler = messageHandler ?? GetPreferredMessageHandler()
         };
         _chats.Add(c);
         
@@ -74,5 +75,16 @@ public static class AIHandler
         }
 
         return c;
+    }
+
+    private static IMessageHandler GetPreferredMessageHandler()
+    {
+        return AISettings.AIType switch
+        {
+            AIType.Ollama => new OllamaMessageHandler(AISettings.OllamaUrl, AISettings.OllamaModel),
+            AIType.Groq => new GroqMessageHandler(AISettings.GroqApiKey, AISettings.GroqModel),
+            AIType.OpenAI => throw new NotImplementedException("OpenAI support is not implemented yet."),
+            _ => throw new ArgumentOutOfRangeException("Unsupported AI type: " + AISettings.AIType)
+        };
     }
 }

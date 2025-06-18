@@ -1,3 +1,4 @@
+// SceneForgeAI/Assets/Core/Editor/Windows/SettingsEditorWindow.cs
 using UnityEditor;
 using UnityEngine;
 
@@ -5,37 +6,7 @@ public class SettingsEditorWindow : EditorWindow
 {
     private readonly string[] tabs = { "General", "API Keys", "Advanced" };
     private int selectedTab = 0;
-    
-    #region Settings
 
-    [SerializeField] private int maxErrorRetries = 3;
-    [SerializeField] private AIType aiType = AIType.Ollama;
-    [SerializeField] private string ollamaModel = "sceneforge",
-        groqModel = "llama3-70b",
-        openAiModel = "gpt-4o-mini";
-    [SerializeField] private string openAiApiKey = string.Empty,
-        groqApiKey = string.Empty,
-        ollamaUrl = "http://localhost:11434";
-    
-    #endregion
-
-    #region Styles
-
-    private static readonly GUIStyle headerStyle = new GUIStyle(EditorStyles.label)
-    {
-        fontSize = 20,
-        alignment = TextAnchor.MiddleCenter,
-        fontStyle = FontStyle.Bold
-    };
-    private static readonly GUIStyle subheaderStyle = new GUIStyle(EditorStyles.label)
-    {
-        fontSize = 16,
-        alignment = TextAnchor.MiddleLeft,
-        fontStyle = FontStyle.Bold,
-    };
-
-    #endregion
-    
     [MenuItem("Tools/SceneForge AI Settings")]
     public static void ShowWindow()
     {
@@ -44,11 +15,16 @@ public class SettingsEditorWindow : EditorWindow
         window.Show();
     }
 
+    private void OnEnable()
+    {
+        // Optionally, load settings here if needed
+    }
+
     private void OnGUI()
     {
-        GUILayout.Label("Scene Forge AI Settings", headerStyle);
+        GUILayout.Label("Scene Forge AI Settings", EditorStyles.boldLabel);
         GUILayout.Space(20);
-        
+
         selectedTab = GUILayout.Toolbar(selectedTab, tabs);
         switch (selectedTab)
         {
@@ -67,40 +43,40 @@ public class SettingsEditorWindow : EditorWindow
     private void DrawGeneralSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("General Settings", subheaderStyle);
-        
-        aiType = (AIType)EditorGUILayout.EnumPopup("AI Type", aiType);
-        switch (aiType)
+        GUILayout.Label("General Settings", EditorStyles.boldLabel);
+
+        AISettings.AIType = (AIType)EditorGUILayout.EnumPopup("AI Type", AISettings.AIType);
+        switch (AISettings.AIType)
         {
             case AIType.Ollama:
-                ollamaModel = EditorGUILayout.TextField("Ollama Model", ollamaModel);
+                AISettings.OllamaModel = EditorGUILayout.TextField("Ollama Model", AISettings.OllamaModel);
                 break;
             case AIType.Groq:
-                groqModel = EditorGUILayout.TextField("Groq Model", groqModel);
+                AISettings.GroqModel = EditorGUILayout.TextField("Groq Model", AISettings.GroqModel);
                 break;
             case AIType.OpenAI:
-                openAiModel = EditorGUILayout.TextField("OpenAI Model", openAiModel);
+                AISettings.OpenAIModel = EditorGUILayout.TextField("OpenAI Model", AISettings.OpenAIModel);
                 break;
         }
     }
-    
+
     private void DrawApiKeysSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("API Keys", subheaderStyle);
-        
+        GUILayout.Label("API Keys", EditorStyles.boldLabel);
+
         EditorGUILayout.BeginVertical(GUI.skin.box);
-        openAiApiKey = EditorGUILayout.TextField("OpenAI API Key", openAiApiKey);
-        groqApiKey = EditorGUILayout.TextField("Groq API Key", groqApiKey);
-        ollamaUrl = EditorGUILayout.TextField("Ollama URL", ollamaUrl);
+        AISettings.OpenAIApiKey = EditorGUILayout.TextField("OpenAI API Key", AISettings.OpenAIApiKey);
+        AISettings.GroqApiKey = EditorGUILayout.TextField("Groq API Key", AISettings.GroqApiKey);
+        AISettings.OllamaUrl = EditorGUILayout.TextField("Ollama URL", AISettings.OllamaUrl);
         EditorGUILayout.EndVertical();
     }
-    
+
     private void DrawAdvancedSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("Advanced Settings", subheaderStyle);
-        
-        maxErrorRetries = EditorGUILayout.IntField("Max Error Retries", maxErrorRetries);
+        GUILayout.Label("Advanced Settings", EditorStyles.boldLabel);
+
+        AISettings.MaxErrorRetries = EditorGUILayout.IntField("Max Error Retries", AISettings.MaxErrorRetries);
     }
 }
