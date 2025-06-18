@@ -34,7 +34,7 @@ public class SceneForgeEditorWindow : EditorWindow
         if (GUILayout.Button("New Chat", GUILayout.Width(125)))
         {
             AIHandler.NewChat("Chat" + chats.Length);
-            _currentChatIndex = chats.Length - 1; // Set to the new chat
+            _currentChatIndex = chats.Length; // Set to the new chat
             _scrollPosition = Vector2.zero; // Reset scroll position
         }
         GUILayout.EndHorizontal();
