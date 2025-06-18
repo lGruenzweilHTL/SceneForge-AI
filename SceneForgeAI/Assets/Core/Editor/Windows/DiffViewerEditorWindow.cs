@@ -19,13 +19,6 @@ public class DiffViewerEditorWindow : EditorWindow
     private Rect FoldoutRect(string name) => GUILayoutUtility.GetRect(
         new GUIContent(name), EditorStyles.foldout, GUILayout.ExpandWidth(true)
     );
-    
-    private static readonly GUIStyle headerStyle = new GUIStyle(EditorStyles.label)
-    {
-        fontSize = 20,
-        alignment = TextAnchor.MiddleCenter,
-        fontStyle = FontStyle.Bold
-    };
 
     #region Demo
 
@@ -117,7 +110,7 @@ public class DiffViewerEditorWindow : EditorWindow
             return;
         }
 
-        EditorGUILayout.LabelField("Scene Differences", headerStyle);
+        EditorGUILayout.LabelField("Scene Differences", HeaderStyles.HeaderStyle);
         EditorGUILayout.Space();
 
         var goGroups = _diffs
@@ -205,9 +198,9 @@ public class DiffViewerEditorWindow : EditorWindow
             {
                 DrawDiff(go, compKey, idx, diff, compType);
             }
-            EditorGUILayout.Space(10);
             EditorGUI.indentLevel--;
         }
+        EditorGUILayout.Space(10);
     }
 
     private void DrawDiff(GameObject go, (GameObject, Type) compKey, int idx, SceneDiff diff, Type compType)

@@ -8,21 +8,6 @@ public class SettingsEditorWindow : EditorWindow
     private readonly string[] tabs = { "General", "API Keys", "Advanced" };
     private int selectedTab = 0;
 
-    private static readonly GUIStyle headerStyle = new GUIStyle(EditorStyles.label)
-    {
-        fontSize = 20,
-        alignment = TextAnchor.MiddleCenter,
-        fontStyle = FontStyle.Bold
-    };
-
-
-    private static readonly GUIStyle subheaderStyle = new GUIStyle(EditorStyles.label)
-    {
-        fontSize = 16,
-        alignment = TextAnchor.MiddleLeft,
-        fontStyle = FontStyle.Bold,
-    };
-
     [MenuItem("Tools/SceneForge AI Settings")]
     public static void ShowWindow()
     {
@@ -33,7 +18,7 @@ public class SettingsEditorWindow : EditorWindow
 
     private void OnGUI()
     {
-        GUILayout.Label("Scene Forge AI Settings", headerStyle);
+        GUILayout.Label("Scene Forge AI Settings", HeaderStyles.HeaderStyle);
         GUILayout.Space(20);
 
         selectedTab = GUILayout.Toolbar(selectedTab, tabs);
@@ -54,7 +39,7 @@ public class SettingsEditorWindow : EditorWindow
     private void DrawGeneralSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("General Settings", subheaderStyle);
+        GUILayout.Label("General Settings", HeaderStyles.SubheaderStyle);
 
         AISettings.AIType = (AIType)EditorGUILayout.EnumPopup("AI Type", AISettings.AIType);
         switch (AISettings.AIType)
@@ -74,7 +59,7 @@ public class SettingsEditorWindow : EditorWindow
     private void DrawApiKeysSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("API Keys", subheaderStyle);
+        GUILayout.Label("API Keys", HeaderStyles.SubheaderStyle);
 
         EditorGUILayout.BeginVertical(GUI.skin.box);
         AISettings.OpenAIApiKey = EditorGUILayout.TextField("OpenAI API Key", AISettings.OpenAIApiKey);
@@ -86,7 +71,7 @@ public class SettingsEditorWindow : EditorWindow
     private void DrawAdvancedSettings()
     {
         GUILayout.Space(10);
-        GUILayout.Label("Advanced Settings", subheaderStyle);
+        GUILayout.Label("Advanced Settings", HeaderStyles.SubheaderStyle);
 
         AISettings.MaxErrorRetries = EditorGUILayout.IntField("Max Error Retries", AISettings.MaxErrorRetries);
     }

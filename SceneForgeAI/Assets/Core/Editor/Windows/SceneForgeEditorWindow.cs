@@ -18,13 +18,7 @@ public class SceneForgeEditorWindow : EditorWindow
 
     private void OnGUI()
     {
-        var headerStyle = new GUIStyle(EditorStyles.label)
-        {
-            fontSize = 20,
-            alignment = TextAnchor.MiddleCenter,
-            fontStyle = FontStyle.Bold
-        };
-        GUILayout.Label("Scene Forge AI", headerStyle);
+        GUILayout.Label("Scene Forge AI", HeaderStyles.HeaderStyle);
         
         GUILayout.BeginHorizontal();
         var chats = AIHandler.Chats;
