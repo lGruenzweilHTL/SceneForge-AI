@@ -16,7 +16,7 @@ public static class AIHandler
         {
             Name = "New Chat",
             History = new List<AIMessage> { Greeting },
-            MessageHandler = new OllamaMessageHandler()
+            MessageHandler = new GroqMessageHandler(Secrets.GroqApiKey)
         }
     };
 
