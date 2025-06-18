@@ -1,133 +1,67 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using JetBrains.Annotations;
 using Unity.Plastic.Newtonsoft.Json;
-using UnityEditor;
-using UnityEditor.Rendering;
-using UnityEngine;
-using UnityEngine.Networking;
-using UnityEngine.SceneManagement;
 
 public static class AIHandler
 {
-    private const string URL = "http://127.0.0.1:11434/";
-    private const string Endpoint = URL + "api/chat";
-    private const string DefaultModel = "sceneforge";
-
     private static readonly AIMessage Greeting = new()
     {
         role = "assistant",
         content = "Hello! I am Scene Forge AI. How can I assist you today?"
     };
-    
-    private static string _mostRecentDiff = "";
 
+    public static Chat[] Chats => _chats.ToArray();
     private static List<Chat> _chats = new()
     {
         new Chat
         {
             Name = "New Chat",
             History = new List<AIMessage> { Greeting },
+            MessageHandler = new GroqMessageHandler(Secrets.GroqApiKey)
         }
     };
 
     private static Chat _currentChat = _chats[0];
-    
-    public static void PromptStream(string prompt)
-    {
-        EditorCoroutineRunner.StartCoroutine(StreamCoroutine(prompt, Selection.gameObjects));
-    }
 
-    private static IEnumerator StreamCoroutine(string prompt, GameObject[] selection = null)
+    public static void SendMessageInChat(string prompt)
     {
         var sceneJson = JsonConvert.SerializeObject(GameObjectSerializer.SerializeSelection(), Formatting.None);
-        _currentChat.History.Add(new AIMessage
+        string requestContent = "Scene JSON: " + sceneJson + "\n\nUser Prompt: " + prompt;
+        var msg = new AIMessage
         {
-            role = "user", 
-            content = "Scene JSON: " 
-            + sceneJson + "\n\nUser Prompt: " + prompt,
-        });
-        var body = new AIRequest
-        {
-            model = DefaultModel,
-            messages = _currentChat.History.ToArray(),
-            stream = true
+            role = "user",
+            content = requestContent,
         };
-        var json = JsonConvert.SerializeObject(body);
-        var request = new UnityWebRequest(Endpoint, "POST");
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
-        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-
-        var streamHandler = new StreamDownloadHandler();
-        request.downloadHandler = streamHandler;
-        request.SetRequestHeader("Content-Type", "application/json");
-        request.SendWebRequest();
-
-        var msg = new AIMessage { role = "assistant", content = "" };
         _currentChat.History.Add(msg);
-
-        while (!request.isDone)
+        var handler = _currentChat.MessageHandler;
+        var responseText = handler.GetChatCompletion(_currentChat.History.ToArray()).GetAwaiter().GetResult();
+        var response = new AIMessage
         {
-            while (streamHandler.HasNewToken())
-            {
-                var token = streamHandler.GetNextToken();
-                msg.content += token;
-            }
-            yield return null;
-        }
+            role = "assistant",
+            content = responseText,
+        };
+        _currentChat.History.Add(response);
         
-        var startIndex = msg.content.IndexOf("```json", StringComparison.Ordinal) + 7;
-        var endIndex = msg.content.IndexOf("```", startIndex, StringComparison.Ordinal);
-        if (startIndex >= 7 && endIndex > startIndex)
-        {
-            _mostRecentDiff = msg.content.Substring(startIndex, endIndex - startIndex).Trim();
-            DiffViewerEditorWindow.ShowWindow(BuildUidMap(selection), _mostRecentDiff);
-        }
-        else
-        {
-            Debug.LogWarning("No valid JSON diff found in the response.");
-        }
-    }
-    
-    private static Dictionary<string, GameObject> BuildUidMap(GameObject[] selection = null)
-    {
-        if (selection == null || selection.Length == 0)
-        {
-            selection = Selection.gameObjects;
-        }
-        
-        return selection
-            .Select((obj, idx) => new { obj, index = idx })
-            .ToDictionary(pair => pair.index.ToString(), pair => pair.obj);
+        ResponseHandler.HandleResponse(responseText);
     }
     
     public static AIMessage[] GetCurrentChatHistory()
     {
         return _currentChat.History.ToArray();
     }
-    public static AIMessage[] GetHistory(string chat)
+
+    public static void SetCurrentChat(int index)
     {
-        var foundChat = _chats.FirstOrDefault(c => c.Name == chat);
-        return !string.IsNullOrEmpty(foundChat.Name) ? foundChat.History.ToArray() : Array.Empty<AIMessage>();
-    }
-    public static void SetCurrentChat(int idx)
-    {
-        if (idx < 0 || idx >= _chats.Count)
-        {
-            Debug.LogError("Invalid chat index.");
-            return;
-        }
-        _currentChat = _chats[idx];
+        if (index >= _chats.Count || index < 0) return;
+        _currentChat = _chats[index];
     }
 
-    public static Chat NewChat([CanBeNull] string name = null, bool updateCurrent = true)
+    public static Chat NewChat(IMessageHandler messageHandler, string name = null, bool updateCurrent = true)
     {
-        Chat c = new Chat
+        var c = new Chat
         {
             Name = name ?? "New Chat",
-            History = new List<AIMessage> { Greeting }
+            History = new List<AIMessage> { Greeting },
+            MessageHandler = messageHandler
         };
         _chats.Add(c);
         
@@ -137,13 +71,5 @@ public static class AIHandler
         }
 
         return c;
-    }
-    public static void DeleteChat(string chatName)
-    {
-        _chats = _chats.Where(c => c.Name != chatName).ToList();
-    }
-    public static string[] GetChatNames()
-    {
-        return _chats.Select(c => c.Name).ToArray();
     }
 }

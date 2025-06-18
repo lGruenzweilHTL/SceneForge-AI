@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -26,13 +27,14 @@ public class SceneForgeEditorWindow : EditorWindow
         GUILayout.Label("Scene Forge AI", headerStyle);
         
         GUILayout.BeginHorizontal();
-        _currentChatIndex = EditorGUILayout.Popup(_currentChatIndex, AIHandler.GetChatNames());
+        var chats = AIHandler.Chats;
+        _currentChatIndex = EditorGUILayout.Popup(_currentChatIndex, chats.Select(c => c.Name).ToArray());
         AIHandler.SetCurrentChat(_currentChatIndex);
         GUILayout.FlexibleSpace();
         if (GUILayout.Button("New Chat", GUILayout.Width(125)))
         {
-            AIHandler.NewChat("Chat" + AIHandler.GetChatNames().Length);
-            _currentChatIndex = AIHandler.GetChatNames().Length - 1; // Set to the new chat
+            AIHandler.NewChat(new OllamaMessageHandler(), "Chat" + chats.Length);
+            _currentChatIndex = chats.Length - 1; // Set to the new chat
             _scrollPosition = Vector2.zero; // Reset scroll position
         }
         GUILayout.EndHorizontal();
@@ -62,7 +64,7 @@ public class SceneForgeEditorWindow : EditorWindow
         
         if (GUILayout.Button("Send Prompt"))
         {
-            AIHandler.PromptStream(_prompt);
+            AIHandler.SendMessageInChat(_prompt);
             _prompt = string.Empty;
         }
     }
