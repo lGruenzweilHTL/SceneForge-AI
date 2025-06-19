@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -50,26 +51,65 @@ public class SceneForgeEditorWindow : EditorWindow
             });
             GUILayout.Label(message.role.ToUpper());
             GUILayout.FlexibleSpace();
-            if (message.json != null && GUILayout.Button("Review Changes", GUILayout.Width(120)))
+            if (message.json != null)
             {
-                ResponseHandler.ShowDiffViewer(message.json);
+                if (GUILayout.Button("Accept", GUILayout.Width(90)))
+                    throw new NotImplementedException("Accept functionality is not implemented yet.");
+                    
+                if (GUILayout.Button("Review Changes", GUILayout.Width(120)))
+                    ResponseHandler.ShowDiffViewer(message.json);
             }
+
             GUILayout.EndHorizontal();
-            GUILayout.Box(message.content, GUI.skin.textArea);
-            GUILayout.Space(5); // Space inside vertical for a little padding
+            var style = new GUIStyle(EditorStyles.textArea)
+            {
+                wordWrap = true,
+                margin = new RectOffset(0, 0, 0, 5),
+            };
+            DynamicHeightSelectableLabel(message.content, style);
             GUILayout.EndVertical();
             GUILayout.Space(10);
         }
         GUILayout.EndScrollView();
         
         GUILayout.Space(20);
-
-        _prompt = EditorGUILayout.TextArea(_prompt, GUILayout.Height(50));
         
-        if (GUILayout.Button("Send Prompt"))
+        const string controlName = "TextArea";
+        GUI.SetNextControlName(controlName);
+        _prompt = GUILayout.TextArea(_prompt, new GUIStyle(EditorStyles.textArea)
         {
-            AIHandler.SendMessageInChat(_prompt);
+            wordWrap = true,
+        }, GUILayout.Height(50));
+        EditorGUIUtility.AddCursorRect(GUILayoutUtility.GetLastRect(), MouseCursor.Text);
+        
+        bool enterPressed = Event.current.type == EventType.KeyUp &&
+                            Event.current.keyCode == KeyCode.Return &&
+                            GUI.GetNameOfFocusedControl() == controlName &&
+                            !Event.current.shift;
+
+        bool shouldSendPrompt = GUILayout.Button("Send Prompt") || enterPressed;
+
+        if (shouldSendPrompt)
+        {
+            if (enterPressed)
+                Event.current.Use();
+
+            if (string.IsNullOrWhiteSpace(_prompt))
+            {
+                EditorUtility.DisplayDialog("Error", "Prompt cannot be empty.", "OK");
+                return;
+            }
+
+            var p = _prompt.TrimEnd('\n', '\r');
             _prompt = string.Empty;
+            AIHandler.SendMessageInChat(p);
         }
+    }
+
+    private static void DynamicHeightSelectableLabel(string text, GUIStyle style)
+    {
+        // TODO: take scrollbar into account
+        float height = style.CalcHeight(new GUIContent(text), EditorGUIUtility.currentViewWidth - 50);
+        EditorGUILayout.SelectableLabel(text, style, GUILayout.Height(height));
     }
 }
