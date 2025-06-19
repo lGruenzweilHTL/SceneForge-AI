@@ -44,11 +44,13 @@ public static class AIHandler
                 .ToArray(),
             responseText =>
             {
+                var jsonContent = ResponseHandler.GetJsonContent(responseText);
                 var response = new ChatMessage
                 {
                     role = "assistant",
                     content = responseText,
-                    json = ResponseHandler.GetJsonContent(responseText)
+                    json = jsonContent,
+                    diffs = ResponseHandler.GenerateDiffs(jsonContent ?? "{ }")
                 };
                 _currentChat.History.Add(response);
             }));

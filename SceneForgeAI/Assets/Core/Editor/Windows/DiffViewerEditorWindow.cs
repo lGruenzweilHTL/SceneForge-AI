@@ -6,8 +6,6 @@ using UnityEngine;
 
 public class DiffViewerEditorWindow : EditorWindow
 {
-    private Dictionary<string, GameObject> _uidMap;
-    private string _diffString = string.Empty;
     private SceneDiff[] _diffs = { };
     private Dictionary<GameObject, bool> _goFoldouts = new();
     private Dictionary<(GameObject, Type), bool> _compFoldouts = new();
@@ -15,87 +13,16 @@ public class DiffViewerEditorWindow : EditorWindow
     private Dictionary<GameObject, bool> _goEnabled = new();
     private Dictionary<(GameObject, Type), bool> _compEnabled = new();
     
-    private Rect ToggleRect() => GUILayoutUtility.GetRect(18, 18, GUILayout.Width(18));
-    private Rect FoldoutRect(string name) => GUILayoutUtility.GetRect(
+    private static Rect ToggleRect() => GUILayoutUtility.GetRect(18, 18, GUILayout.Width(18));
+    private static Rect FoldoutRect(string name) => GUILayoutUtility.GetRect(
         new GUIContent(name), EditorStyles.foldout, GUILayout.ExpandWidth(true)
     );
-
-    #region Demo
-
-    [MenuItem("Tools/Demo/Diff Viewer Demo")]
-    public static void ShowDemoWindow()
-    {
-        // Demo GameObjects (not added to the scene)
-        var go1 = new GameObject("Player");
-        var go2 = new GameObject("Enemy");
-
-        // Demo UID map
-        var uidMap = new Dictionary<string, GameObject>
-        {
-            { "uid_player", go1 },
-            { "uid_enemy", go2 }
-        };
-
-        // Demo diffs
-        var diffs = new[]
-        {
-            new SceneDiff
-            {
-                GameObject = go1,
-                ComponentType = typeof(Transform),
-                DiffType = SceneDiffType.PropertyChange,
-                Property = typeof(Transform).GetProperty("position"),
-                OldValue = new Vector3(0, 0, 0),
-                NewValue = new Vector3(1, 2, 3)
-            },
-            new SceneDiff
-            {
-                GameObject = go1,
-                ComponentType = typeof(BoxCollider),
-                DiffType = SceneDiffType.AddComponent
-            },
-            new SceneDiff
-            {
-                GameObject = go1,
-                ComponentType = typeof(BoxCollider),
-                DiffType = SceneDiffType.PropertyChange,
-                Property = typeof(BoxCollider).GetProperty("size"),
-                OldValue = new Vector3(1, 1, 1),
-                NewValue = new Vector3(2, 2, 2)
-            },
-            new SceneDiff
-            {
-                GameObject = go2,
-                ComponentType = typeof(Transform),
-                DiffType = SceneDiffType.PropertyChange,
-                Property = typeof(Transform).GetProperty("localScale"),
-                OldValue = new Vector3(1, 1, 1),
-                NewValue = new Vector3(2, 2, 2)
-            }
-        };
-
-        // Create and show the window
-        var window = GetWindow<DiffViewerEditorWindow>("Diff Viewer Demo");
-        window.minSize = new Vector2(500, 400);
-        window._uidMap = uidMap;
-        window._diffString = ""; // Not used in demo
-        window._diffs = diffs;
-        window._selectedDiffs = diffs.Select((_, i) => new { i }).ToDictionary(x => x.i, x => true);
-        window._goFoldouts.Clear();
-        window._compFoldouts.Clear();
-        window.Show();
-    }
-
-    #endregion
-
-    public static void ShowWindow(Dictionary<string, GameObject> uidMap, string diffString)
+    
+    public static void ShowWindow(SceneDiff[] diffs)
     {
         var window = GetWindow<DiffViewerEditorWindow>("Diff Viewer");
-        window.minSize = new Vector2(500, 400);
-
-        window._uidMap = uidMap;
-        window._diffString = diffString;
-        window.GenerateDiff();
+        window.minSize = new Vector2(200, 100);
+        window.Initialize(diffs);
 
         window.Show();
     }
@@ -127,6 +54,7 @@ public class DiffViewerEditorWindow : EditorWindow
         if (GUILayout.Button("Apply Selected Diffs"))
         {
             ApplySelectedDiffs();
+            Close();
         }
     }
 
@@ -246,10 +174,9 @@ public class DiffViewerEditorWindow : EditorWindow
     
     #region Diff System
 
-    private void GenerateDiff()
+    private void Initialize(SceneDiff[] diffs)
     {
-        var diff = SceneDiffHandler.GetDiffFromScene(_diffString, _uidMap);
-        _diffs = diff
+        _diffs = diffs
             .Where(d => d.OldValue != d.NewValue || d.OldValue == null || d.NewValue == null)
             .ToArray();
         _selectedDiffs = _diffs
@@ -276,34 +203,7 @@ public class DiffViewerEditorWindow : EditorWindow
             .ToArray();
 
         foreach (var diff in orderedDiffs)
-            ApplyDiff(diff);
-    }
-
-    private static void ApplyDiff(SceneDiff diff)
-    {
-        switch (diff.DiffType)
-        {
-            case SceneDiffType.PropertyChange:
-                var component = diff.Component ?? diff.GameObject.GetComponent(diff.ComponentType);
-                if (!component)
-                {
-                    Debug.LogWarning(
-                        $"Component {diff.ComponentType.Name} not found on GameObject {diff.GameObject.name}. " +
-                        "This might be due to a missing AddComponent diff.");
-                    return;
-                }
-
-                component.GetType()
-                    .GetProperty(diff.Property.Name)
-                    ?.SetValue(component, diff.NewValue);
-                break;
-            case SceneDiffType.AddComponent:
-                diff.GameObject.AddComponent(diff.ComponentType);
-                break;
-            case SceneDiffType.RemoveComponent:
-                DestroyImmediate(diff.GameObject.GetComponent(diff.ComponentType));
-                break;
-        }
+            ResponseHandler.ApplyDiff(diff);
     }
 
     #endregion

@@ -54,10 +54,11 @@ public class SceneForgeEditorWindow : EditorWindow
             if (message.json != null)
             {
                 if (GUILayout.Button("Accept", GUILayout.Width(90)))
-                    throw new NotImplementedException("Accept functionality is not implemented yet.");
+                    foreach (var diff in message.diffs)
+                        ResponseHandler.ApplyDiff(diff);
                     
                 if (GUILayout.Button("Review Changes", GUILayout.Width(120)))
-                    ResponseHandler.ShowDiffViewer(message.json);
+                    DiffViewerEditorWindow.ShowWindow(message.diffs);
             }
 
             GUILayout.EndHorizontal();

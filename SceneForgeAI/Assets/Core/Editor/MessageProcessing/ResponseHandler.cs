@@ -5,7 +5,7 @@ using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
 
-public class ResponseHandler
+public static class ResponseHandler
 {
     [CanBeNull]
     public static string GetJsonContent(string content)
@@ -15,11 +15,6 @@ public class ResponseHandler
         if (startIndex >= 7 && endIndex > startIndex)
             return content.Substring(startIndex, endIndex - startIndex).Trim();
         return null;
-    }
-
-    public static void ShowDiffViewer(string diffJson)
-    {
-        DiffViewerEditorWindow.ShowWindow(BuildUidMap(), diffJson);
     }
     
     private static Dictionary<string, GameObject> BuildUidMap(GameObject[] selection = null)
@@ -32,5 +27,34 @@ public class ResponseHandler
         return selection
             .Select((obj, idx) => new { obj, index = idx })
             .ToDictionary(pair => pair.index.ToString(), pair => pair.obj);
+    }
+    
+    public static SceneDiff[] GenerateDiffs(string json) => SceneDiffHandler.GetDiffFromScene(json, BuildUidMap());
+    
+    public static void ApplyDiff(SceneDiff diff)
+    {
+        switch (diff.DiffType)
+        {
+            case SceneDiffType.PropertyChange:
+                var component = diff.Component ?? diff.GameObject.GetComponent(diff.ComponentType);
+                if (!component)
+                {
+                    Debug.LogWarning(
+                        $"Component {diff.ComponentType.Name} not found on GameObject {diff.GameObject.name}. " +
+                        "This might be due to a missing AddComponent diff.");
+                    return;
+                }
+
+                component.GetType()
+                    .GetProperty(diff.Property.Name)
+                    ?.SetValue(component, diff.NewValue);
+                break;
+            case SceneDiffType.AddComponent:
+                diff.GameObject.AddComponent(diff.ComponentType);
+                break;
+            case SceneDiffType.RemoveComponent:
+                UnityEngine.Object.DestroyImmediate(diff.GameObject.GetComponent(diff.ComponentType));
+                break;
+        }
     }
 }
