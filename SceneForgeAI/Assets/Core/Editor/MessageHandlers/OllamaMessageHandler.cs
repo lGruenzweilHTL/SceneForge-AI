@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Unity.Plastic.Newtonsoft.Json;
@@ -29,21 +28,26 @@ public class OllamaMessageHandler : IMessageHandler
         };
 
         var json = JsonConvert.SerializeObject(body);
-        yield return WebRequestUtility.SendPostRequest(_endpoint, json, new Dictionary<string, string>
+        var request = new UnityWebRequest(_endpoint, "POST");
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        var op = request.SendWebRequest();
+        while (!op.isDone)
         {
-            ["Content-Type"] = "application/json"
-        }, request => OnRequestSuccess(request, callback), error => OnRequestError(error, callback));
-    }
-
-    private void OnRequestSuccess(UnityWebRequest request, Action<string> callback)
-    {
-        var response = JsonConvert.DeserializeObject<AIResponse>(request.downloadHandler.text);
-        callback(response.message.content);
-    }
-
-    private void OnRequestError(string error, Action<string> callback)
-    {
-        Debug.LogError($"Error sending message: {error}");
-        callback($"Error: {error}");
+            yield return null; // Wait for the request to complete
+        }
+        
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            var response = JsonConvert.DeserializeObject<AIResponse>(request.downloadHandler.text);
+            callback(response.message.content);
+            yield break; // Exit the coroutine on success
+        }
+       
+        Debug.LogError($"Error sending message: {request.error}");
+        callback($"Error: {request.error}");
     }
 }

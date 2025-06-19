@@ -44,7 +44,17 @@ public class SceneForgeEditorWindow : EditorWindow
         foreach (var message in AIHandler.GetCurrentChatHistory())
         {
             GUILayout.BeginVertical(GUI.skin.button);
+            GUILayout.BeginHorizontal(new GUIStyle
+            {
+                margin = new RectOffset(0, 0, 0, 3),
+            });
             GUILayout.Label(message.role.ToUpper());
+            GUILayout.FlexibleSpace();
+            if (message.json != null && GUILayout.Button("Review Changes", GUILayout.Width(120)))
+            {
+                ResponseHandler.ShowDiffViewer(message.json);
+            }
+            GUILayout.EndHorizontal();
             GUILayout.Box(message.content, GUI.skin.textArea);
             GUILayout.Space(5); // Space inside vertical for a little padding
             GUILayout.EndVertical();

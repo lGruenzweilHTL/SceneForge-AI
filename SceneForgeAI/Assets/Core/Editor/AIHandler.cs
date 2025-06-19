@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Plastic.Newtonsoft.Json;
 
 public static class AIHandler
 {
-    private static readonly AIMessage Greeting = new()
+    private static readonly ChatMessage Greeting = new()
     {
         role = "assistant",
         content = "Hello! I am Scene Forge AI. How can I assist you today?"
@@ -16,7 +17,7 @@ public static class AIHandler
         new Chat
         {
             Name = "New Chat",
-            History = new List<AIMessage> { Greeting },
+            History = new List<ChatMessage> { Greeting },
             MessageHandler = GetPreferredMessageHandler()
         }
     };
@@ -27,28 +28,33 @@ public static class AIHandler
     {
         var sceneJson = JsonConvert.SerializeObject(GameObjectSerializer.SerializeSelection(), Formatting.None);
         string requestContent = "Scene JSON: " + sceneJson + "\n\nUser Prompt: " + prompt;
-        var msg = new AIMessage
+        var msg = new ChatMessage()
         {
             role = "user",
             content = requestContent,
         };
         _currentChat.History.Add(msg);
         var handler = _currentChat.MessageHandler;
-        EditorCoroutineRunner.StartCoroutine(handler.GetChatCompletion(_currentChat.History.ToArray(),
+        EditorCoroutineRunner.StartCoroutine(handler.GetChatCompletion(_currentChat.History
+                .Select(m => new AIMessage
+                {
+                    role = m.role,
+                    content = m.content,
+                })
+                .ToArray(),
             responseText =>
             {
-                var response = new AIMessage
+                var response = new ChatMessage
                 {
                     role = "assistant",
                     content = responseText,
+                    json = ResponseHandler.GetJsonContent(responseText)
                 };
                 _currentChat.History.Add(response);
-                
-                ResponseHandler.HandleResponse(responseText);
             }));
     }
     
-    public static AIMessage[] GetCurrentChatHistory()
+    public static ChatMessage[] GetCurrentChatHistory()
     {
         return _currentChat.History.ToArray();
     }
@@ -64,7 +70,7 @@ public static class AIHandler
         var c = new Chat
         {
             Name = name ?? "New Chat",
-            History = new List<AIMessage> { Greeting },
+            History = new List<ChatMessage> { Greeting },
             MessageHandler = messageHandler ?? GetPreferredMessageHandler()
         };
         _chats.Add(c);
