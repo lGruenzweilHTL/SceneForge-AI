@@ -8,7 +8,7 @@ using UnityEngine.Networking;
 
 public class OllamaMessageHandler : IMessageHandler
 {
-    public OllamaMessageHandler(string url = "http://127.0.0.1:11434", string model = "sceneforge")
+    public OllamaMessageHandler(string url = "http://127.0.0.1:11434", string model = "deepseek-coder:6.7b")
     {
         Model = model;
         _endpoint = url.EndsWith("/") ? url + "api/chat" : url + "/api/chat";

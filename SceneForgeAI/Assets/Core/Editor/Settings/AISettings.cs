@@ -44,7 +44,7 @@ public static class AISettings
     
     public static string OllamaModel
     {
-        get => EditorPrefs.GetString(OllamaModelKey, "sceneforge");
+        get => EditorPrefs.GetString(OllamaModelKey, "deepseek-coder:6.7b");
         set => EditorPrefs.SetString(OllamaModelKey, value);
     }
     
