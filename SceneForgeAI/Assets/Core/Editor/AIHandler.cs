@@ -50,12 +50,12 @@ public static class AIHandler
         "  }\n" +
         "}\n" +
         "```\n\n";
-    
+
     private static readonly ChatMessage SystemMessage = new()
     {
         Role = "system",
         Content = SystemPrompt,
-		Display = false
+        Display = false
     };
     private static readonly ChatMessage Greeting = new()
     {
@@ -75,37 +75,100 @@ public static class AIHandler
     {
         var sceneJson = JsonConvert.SerializeObject(GameObjectSerializer.SerializeSelection(), Formatting.None);
         string requestContent = "Scene JSON: " + sceneJson + "\n\nUser Prompt: " + prompt;
-        var msg = new ChatMessage()
+        var msg = new ChatMessage
         {
             Role = "user",
             Content = requestContent,
         };
         _currentChat.History.Add(msg);
         var handler = _currentChat.MessageHandler;
-        EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletion(_currentChat.History
-                .Select(m => new AIMessage
-                {
-                    role = m.Role,
-                    content = m.Content,
-                })
-                .ToArray(),
-            responseText =>
-            {
-                var jsonContent = ResponseHandler.GetJsonContent(responseText);
-                var response = new ChatMessage
-                {
-                    Role = "assistant",
-                    Content = responseText,
-                    Json = jsonContent,
-                    Diffs = ResponseHandler.GenerateDiffs(jsonContent ?? "{ }")
-                };
-                _currentChat.History.Add(response);
-            }));
+        var retriesLeft = AISettings.MaxErrorRetries;
+        
+        SendMessage(handler, retriesLeft);
+    }
+
+    private static void SendMessage(IMessageHandler handler, int retriesLeft)
+    {
+        try
+        {
+            EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletion(_currentChat.History
+                    .Select(m => new AIMessage
+                    {
+                        role = m.Role,
+                        content = m.Content,
+                    })
+                    .ToArray(),
+                r => OnResponseReceived(r, retriesLeft)));
+        }
+        catch (Exception e)
+        {
+            ProcessError(e, retriesLeft);
+        }
     }
     
+    private static void OnResponseReceived(string responseText, int retriesLeft)
+    {
+        var jsonContent = responseText; // Default to the raw response text (for error handling)
+        try
+        {
+            jsonContent = ResponseHandler.GetJsonContent(responseText);
+            var response = new ChatMessage
+            {
+                Role = "assistant",
+                Content = responseText,
+                Json = jsonContent,
+                Diffs = ResponseHandler.GenerateDiffs(jsonContent ?? "{ }")
+            };
+            _currentChat.History.Add(response);
+        }
+        catch (Exception e)
+        {
+            ProcessError(e, retriesLeft, jsonContent);
+        }
+    }
+
+    private static void ProcessError(Exception e, int retriesLeft, string content = null)
+    {
+        if (retriesLeft > 0)
+        {
+            _currentChat.History.Add(new ChatMessage
+            {
+                Role = "assistant",
+                Content = $"An error occured: {e.Message}" +
+                          (content == null ? "" : "\nThis is the content that caused the error:\n" + content),
+                Display = false
+            });
+            _currentChat.History.Add(new ChatMessage
+            {
+                Role = "user",
+                Content = "Please try again keeping the same context and prompt.\n" +
+                          "With your new response, try to not make the same error as before.\n" +
+                          "If the error is not your fault (e.g. Rate limit exceeded), please explain what went wrong and how to fix it to the user.",
+                Display = false
+            });
+            
+            // Retry sending the message
+            SendMessage(_currentChat.MessageHandler, retriesLeft - 1);
+            return;
+        }
+
+        // If all retries are exhausted, log the error
+        UnityEngine.Debug.LogError($"Could not process message after {AISettings.MaxErrorRetries} retries: {e.Message}" +
+                                   (content == null ? "" : "\n" + content));
+        
+        // Add an info message to the chat history
+        _currentChat.History.Add(new ChatMessage
+        {
+            Role = "assistant",
+            Content = "Number of retries exceeded. " +
+                      "Please check the console for more details on the error.\n" +
+                      "If you think this is a bug, please report it on the SceneForge-AI GitHub repository."
+        });
+    }
+
     public static ChatMessage[] GetCurrentChatHistory()
     {
-        return _currentChat.History 
+        return _currentChat.History
             .Where(m => m.Display)
             .ToArray();
     }
@@ -120,7 +183,7 @@ public static class AIHandler
     {
         var c = CreateChat(name, messageHandler);
         _chats.Add(c);
-        
+
         if (updateCurrent)
         {
             _currentChat = c;
