@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.EditorCoroutines.Editor;
 using Unity.Plastic.Newtonsoft.Json;
 
 public static class AIHandler
@@ -80,7 +81,7 @@ public static class AIHandler
         };
         _currentChat.History.Add(msg);
         var handler = _currentChat.MessageHandler;
-        EditorCoroutineRunner.StartCoroutine(handler.GetChatCompletion(_currentChat.History
+        EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletion(_currentChat.History
                 .Select(m => new AIMessage
                 {
                     role = m.role,
