@@ -49,16 +49,16 @@ public class SceneForgeEditorWindow : EditorWindow
             {
                 margin = new RectOffset(0, 0, 0, 3),
             });
-            GUILayout.Label(message.role.ToUpper());
+            GUILayout.Label(message.Role.ToUpper());
             GUILayout.FlexibleSpace();
-            if (message.json != null)
+            if (message.Json != null)
             {
                 if (GUILayout.Button("Accept", GUILayout.Width(90)))
-                    foreach (var diff in message.diffs)
+                    foreach (var diff in message.Diffs)
                         ResponseHandler.ApplyDiff(diff);
                     
                 if (GUILayout.Button("Review Changes", GUILayout.Width(120)))
-                    DiffViewerEditorWindow.ShowWindow(message.diffs);
+                    DiffViewerEditorWindow.ShowWindow(message.Diffs);
             }
 
             GUILayout.EndHorizontal();
@@ -67,7 +67,7 @@ public class SceneForgeEditorWindow : EditorWindow
                 wordWrap = true,
                 margin = new RectOffset(0, 0, 0, 5),
             };
-            DynamicHeightSelectableLabel(message.content, style);
+            DynamicHeightSelectableLabel(message.Content, style);
             GUILayout.EndVertical();
             GUILayout.Space(10);
         }

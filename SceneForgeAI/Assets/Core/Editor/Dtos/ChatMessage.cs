@@ -1,9 +1,11 @@
+using System;
 using JetBrains.Annotations;
 
 public class ChatMessage
 {
-    public string role { get; set; }
-    public string content { get; set; }
-    [CanBeNull] public string json { get; set; }
-    public SceneDiff[] diffs { get; set; }
+    public string Role;
+    public string Content;
+    [CanBeNull] public string Json = null;
+    public SceneDiff[] Diffs = Array.Empty<SceneDiff>();
+    public bool Display = true;
 }

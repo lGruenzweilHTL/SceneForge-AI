@@ -53,13 +53,14 @@ public static class AIHandler
     
     private static readonly ChatMessage SystemMessage = new()
     {
-        role = "system",
-        content = SystemPrompt
+        Role = "system",
+        Content = SystemPrompt,
+		Display = false
     };
     private static readonly ChatMessage Greeting = new()
     {
-        role = "assistant",
-        content = "Hello! I am Scene Forge AI. How can I assist you today?"
+        Role = "assistant",
+        Content = "Hello! I am Scene Forge AI. How can I assist you today?"
     };
 
     public static Chat[] Chats => _chats.ToArray();
@@ -76,16 +77,16 @@ public static class AIHandler
         string requestContent = "Scene JSON: " + sceneJson + "\n\nUser Prompt: " + prompt;
         var msg = new ChatMessage()
         {
-            role = "user",
-            content = requestContent,
+            Role = "user",
+            Content = requestContent,
         };
         _currentChat.History.Add(msg);
         var handler = _currentChat.MessageHandler;
         EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletion(_currentChat.History
                 .Select(m => new AIMessage
                 {
-                    role = m.role,
-                    content = m.content,
+                    role = m.Role,
+                    content = m.Content,
                 })
                 .ToArray(),
             responseText =>
@@ -93,10 +94,10 @@ public static class AIHandler
                 var jsonContent = ResponseHandler.GetJsonContent(responseText);
                 var response = new ChatMessage
                 {
-                    role = "assistant",
-                    content = responseText,
-                    json = jsonContent,
-                    diffs = ResponseHandler.GenerateDiffs(jsonContent ?? "{ }")
+                    Role = "assistant",
+                    Content = responseText,
+                    Json = jsonContent,
+                    Diffs = ResponseHandler.GenerateDiffs(jsonContent ?? "{ }")
                 };
                 _currentChat.History.Add(response);
             }));
@@ -104,7 +105,9 @@ public static class AIHandler
     
     public static ChatMessage[] GetCurrentChatHistory()
     {
-        return _currentChat.History.Skip(1).ToArray(); // Skip the system message
+        return _currentChat.History 
+            .Where(m => m.Display)
+            .ToArray();
     }
 
     public static void SetCurrentChat(int index)
