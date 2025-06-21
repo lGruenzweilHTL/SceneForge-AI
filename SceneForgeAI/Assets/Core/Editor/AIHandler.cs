@@ -89,54 +89,46 @@ public static class AIHandler
 
     private static void SendMessage(IMessageHandler handler, int retriesLeft)
     {
-        EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletion(_currentChat.History
+        var response = new ChatMessage
+        {
+            Role = "assistant",
+            Content = "",
+        };
+        _currentChat.History.Add(response);
+        EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletionWithStream(_currentChat.History
                 .Select(m => new AIMessage
                 {
                     role = m.Role,
                     content = m.Content,
                 })
                 .ToArray(),
-            r => OnResponseReceived(r, retriesLeft)));
+            r => response.Content += r,
+            () => OnResponseReceived(response, retriesLeft)));
     }
     
-    private static void OnResponseReceived(string responseText, int retriesLeft)
+    private static void OnResponseReceived(ChatMessage responseMessage, int retriesLeft)
     {
-        var jsonContent = responseText; // Default to the raw response text (for error handling)
         try
         {
-            jsonContent = ResponseHandler.GetJsonContent(responseText);
-            var response = new ChatMessage
-            {
-                Role = "assistant",
-                Content = responseText,
-                Json = jsonContent,
-                Diffs = ResponseHandler.GenerateDiffs(jsonContent ?? "{ }")
-            };
-            _currentChat.History.Add(response);
+            var jsonContent = ResponseHandler.GetJsonContent(responseMessage.Content);
+            responseMessage.Json = jsonContent;
+            responseMessage.Diffs = ResponseHandler.GenerateDiffs(jsonContent ?? "{ }");
         }
         catch (Exception e)
         {
-            ProcessParsingError(e, retriesLeft, jsonContent);
+            ProcessParsingError(e, retriesLeft);
         }
     }
 
-    private static void ProcessParsingError(Exception e, int retriesLeft, string content = null)
+    private static void ProcessParsingError(Exception e, int retriesLeft)
     {
         if (retriesLeft > 0)
         {
             _currentChat.History.Add(new ChatMessage
             {
-                Role = "assistant",
-                Content = $"An error occured: {e.Message}" +
-                          (content == null ? "" : "\nThis is the content that caused the error:\n" + content),
-                Display = false
-            });
-            _currentChat.History.Add(new ChatMessage
-            {
                 Role = "user",
-                Content = "Please try again keeping the same context and prompt.\n" +
-                          "With your new response, try to not make the same error as before.\n" +
-                          "If the error is not your fault (e.g. Rate limit exceeded), please explain what went wrong and how to fix it to the user.",
+                Content = "An error occurred while processing the response: " + e.Message +
+                          "\nPlease try again keeping the same prompt and context.",
                 Display = false
             });
             
@@ -146,8 +138,7 @@ public static class AIHandler
         }
 
         // If all retries are exhausted, log the error
-        UnityEngine.Debug.LogError($"Could not process message after {AISettings.MaxErrorRetries} retries: {e.Message}" +
-                                   (content == null ? "" : "\n" + content));
+        UnityEngine.Debug.LogError($"Could not process message after {AISettings.MaxErrorRetries} retries: {e.Message}");
         
         // Add an info message to the chat history
         _currentChat.History.Add(new ChatMessage

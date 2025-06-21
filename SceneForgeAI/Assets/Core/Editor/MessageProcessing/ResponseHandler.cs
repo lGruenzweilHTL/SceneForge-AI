@@ -11,9 +11,12 @@ public static class ResponseHandler
     public static string GetJsonContent(string content)
     {
         var startIndex = content.IndexOf("```json", StringComparison.Ordinal) + 7;
+        if (startIndex < 7) return null; // No valid start found
+        
         var endIndex = content.IndexOf("```", startIndex, StringComparison.Ordinal);
-        if (startIndex >= 7 && endIndex > startIndex)
+        if (endIndex > startIndex)
             return content.Substring(startIndex, endIndex - startIndex).Trim();
+        
         return null;
     }
     

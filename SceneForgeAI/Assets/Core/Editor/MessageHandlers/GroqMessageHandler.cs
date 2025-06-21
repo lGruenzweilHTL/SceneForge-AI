@@ -35,7 +35,35 @@ public class GroqMessageHandler : IMessageHandler
         }, request => OnRequestSuccess(request, callback), error => OnRequestError(error, callback));
     }
 
-    
+    public IEnumerator GetChatCompletionWithStream(AIMessage[] history, Action<string> onNewToken, Action onMessageCompleted)
+    {
+        var body = new AIRequest
+        {
+            model = Model,
+            messages = history,
+            stream = true
+        };
+
+        var json = JsonConvert.SerializeObject(body);
+        var downloadHandler = new StreamDownloadHandler<GroqStreamResponse>();
+        WebRequestUtility.SendPostRequest(Endpoint, json, out var operation, new Dictionary<string, string>
+        {
+            ["Content-Type"] = "application/json",
+            ["Authorization"] = "Bearer " + _key
+        }, downloadHandler);
+        while (!operation.isDone)
+        {
+            while (downloadHandler.HasNewToken())
+            {
+                var token = downloadHandler.GetNextToken();
+                onNewToken?.Invoke(token.Choices[0].Delta.Content);
+            }
+            yield return null;
+        }
+        onMessageCompleted?.Invoke();
+    }
+
+
     private void OnRequestSuccess(UnityWebRequest request, Action<string> callback)
     {
         var response = JsonConvert.DeserializeObject<GroqResponse>(request.downloadHandler.text);

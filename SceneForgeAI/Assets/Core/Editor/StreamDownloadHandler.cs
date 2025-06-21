@@ -1,10 +1,11 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEngine.Networking;
 
-public class StreamDownloadHandler : DownloadHandlerScript
+public class StreamDownloadHandler<T> : DownloadHandlerScript
 {
-    private readonly Queue<string> tokens = new();
+    private readonly Queue<T> tokens = new();
 
     protected override bool ReceiveData(byte[] data, int dataLength)
     {
@@ -13,13 +14,14 @@ public class StreamDownloadHandler : DownloadHandlerScript
         {
             if (!string.IsNullOrWhiteSpace(line))
             {
-                var response = JsonConvert.DeserializeObject<AIStreamResponse>(line);
-                if (response.message != null) tokens.Enqueue(response.message.content);
+                var cleaned = string.Join("", line.Trim().SkipWhile(c => c != '{'));
+                var response = JsonConvert.DeserializeObject<T>(cleaned);
+                if (response != null) tokens.Enqueue(response);
             }
         }
         return true;
     }
 
     public bool HasNewToken() => tokens.Count > 0;
-    public string GetNextToken() => tokens.Dequeue();
+    public T GetNextToken() => tokens.Dequeue();
 }

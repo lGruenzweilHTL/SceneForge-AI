@@ -32,6 +32,32 @@ public class OllamaMessageHandler : IMessageHandler
             ["Content-Type"] = "application/json"
         }, request => OnRequestSuccess(request, callback), error => OnRequestError(error, callback));
     }
+    public IEnumerator GetChatCompletionWithStream(AIMessage[] history, Action<string> onNewToken, Action onMessageCompleted)
+    {
+        var body = new AIRequest
+        {
+            model = Model,
+            messages = history,
+            stream = true
+        };
+
+        var json = JsonConvert.SerializeObject(body);
+        var downloadHandler = new StreamDownloadHandler<AIStreamResponse>();
+        WebRequestUtility.SendPostRequest(_endpoint, json, out var operation, new Dictionary<string, string>
+        {
+            ["Content-Type"] = "application/json"
+        }, downloadHandler);
+        while (!operation.isDone)
+        {
+            while (downloadHandler.HasNewToken())
+            {
+                var token = downloadHandler.GetNextToken();
+                onNewToken?.Invoke(token.message.content);
+            }
+            yield return null;
+        }
+        onMessageCompleted?.Invoke();
+    }
 
     private void OnRequestSuccess(UnityWebRequest request, Action<string> callback)
     {
