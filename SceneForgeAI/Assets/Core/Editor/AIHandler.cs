@@ -89,21 +89,14 @@ public static class AIHandler
 
     private static void SendMessage(IMessageHandler handler, int retriesLeft)
     {
-        try
-        {
-            EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletion(_currentChat.History
-                    .Select(m => new AIMessage
-                    {
-                        role = m.Role,
-                        content = m.Content,
-                    })
-                    .ToArray(),
-                r => OnResponseReceived(r, retriesLeft)));
-        }
-        catch (Exception e)
-        {
-            ProcessError(e, retriesLeft);
-        }
+        EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletion(_currentChat.History
+                .Select(m => new AIMessage
+                {
+                    role = m.Role,
+                    content = m.Content,
+                })
+                .ToArray(),
+            r => OnResponseReceived(r, retriesLeft)));
     }
     
     private static void OnResponseReceived(string responseText, int retriesLeft)
@@ -123,11 +116,11 @@ public static class AIHandler
         }
         catch (Exception e)
         {
-            ProcessError(e, retriesLeft, jsonContent);
+            ProcessParsingError(e, retriesLeft, jsonContent);
         }
     }
 
-    private static void ProcessError(Exception e, int retriesLeft, string content = null)
+    private static void ProcessParsingError(Exception e, int retriesLeft, string content = null)
     {
         if (retriesLeft > 0)
         {
