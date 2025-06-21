@@ -74,5 +74,7 @@ public class SettingsEditorWindow : EditorWindow
         GUILayout.Label("Advanced Settings", HeaderStyles.SubheaderStyle);
 
         AISettings.MaxErrorRetries = EditorGUILayout.IntField("Max Error Retries", AISettings.MaxErrorRetries);
+        AISettings.AllowObjectCreation = EditorGUILayout.Toggle("Allow Object Creation", AISettings.AllowObjectCreation);
+        AISettings.AllowComponentCreation = EditorGUILayout.Toggle("Allow Component Creation", AISettings.AllowComponentCreation);
     }
 }

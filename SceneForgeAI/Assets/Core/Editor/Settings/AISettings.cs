@@ -11,6 +11,8 @@ public static class AISettings
     private const string OllamaModelKey = "SceneForgeAI_OllamaModel";
     private const string GroqModelKey = "SceneForgeAI_GroqModel";
     private const string OpenAIModelKey = "SceneForgeAI_OpenAIModel";
+    private const string AllowObjectCreationKey = "SceneForgeAI_AllowObjectCreation";
+    private const string AllowComponentCreationKey = "SceneForgeAI_AllowComponentCreation";
 
     public static string OpenAIApiKey
     {
@@ -58,5 +60,17 @@ public static class AISettings
     {
         get => EditorPrefs.GetString(OpenAIModelKey, "gpt-3.5-turbo");
         set => EditorPrefs.SetString(OpenAIModelKey, value);
+    }
+    
+    public static bool AllowObjectCreation
+    {
+        get => EditorPrefs.GetBool(AllowObjectCreationKey, true);
+        set => EditorPrefs.SetBool(AllowObjectCreationKey, value);
+    }
+    
+    public static bool AllowComponentCreation
+    {
+        get => EditorPrefs.GetBool(AllowComponentCreationKey, true);
+        set => EditorPrefs.SetBool(AllowComponentCreationKey, value);
     }
 }

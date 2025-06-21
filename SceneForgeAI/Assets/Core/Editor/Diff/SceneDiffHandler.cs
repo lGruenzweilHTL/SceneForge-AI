@@ -17,7 +17,7 @@ public static class SceneDiffHandler
         var objectLayer = JsonConvert.DeserializeObject<Dictionary<string, object>>(diff);
         foreach ((string uid, object componentData) in objectLayer)
         {
-            if (!uidMap.TryGetValue(uid, out GameObject go))
+            if (!uidMap.TryGetValue(uid, out GameObject go) && AISettings.AllowObjectCreation)
             {
                 go = CreateGameObjectFromComponentData(componentData, uidMap);
                 uidMap.Add(uid, go);
@@ -45,6 +45,12 @@ public static class SceneDiffHandler
 
             if (!hasComponent)
             {
+                if (!AISettings.AllowComponentCreation) 
+                {
+                    Debug.LogWarning($"Component of type '{type}' cannot be created on GameObject '{go.name}' as component creation is disabled.");
+                    continue;
+                }
+                
                 // AddComponent diff
                 diffs.Add(new SceneDiff
                 {
