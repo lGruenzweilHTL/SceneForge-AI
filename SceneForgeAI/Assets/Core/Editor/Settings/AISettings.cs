@@ -7,7 +7,6 @@ public static class AISettings
     private const string GroqKey = "SceneForgeAI_GroqKey";
     private const string OllamaUrlKey = "SceneForgeAI_OllamaUrl";
     private const string AITypeKey = "SceneForgeAI_AIType";
-    private const string MaxErrorRetriesKey = "SceneForgeAI_MaxErrorRetries";
     private const string OllamaModelKey = "SceneForgeAI_OllamaModel";
     private const string GroqModelKey = "SceneForgeAI_GroqModel";
     private const string OpenAIModelKey = "SceneForgeAI_OpenAIModel";
@@ -36,12 +35,6 @@ public static class AISettings
     {
         get => (AIType)EditorPrefs.GetInt(AITypeKey, 0);
         set => EditorPrefs.SetInt(AITypeKey, (int)value);
-    }
-
-    public static int MaxErrorRetries
-    {
-        get => EditorPrefs.GetInt(MaxErrorRetriesKey, 3);
-        set => EditorPrefs.SetInt(MaxErrorRetriesKey, value);
     }
     
     public static string OllamaModel

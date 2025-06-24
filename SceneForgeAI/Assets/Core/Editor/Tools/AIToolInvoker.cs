@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 using Unity.Plastic.Newtonsoft.Json.Linq;
 
@@ -6,10 +7,11 @@ public static class AIToolInvoker
 {
     public static object InvokeTool(string toolName, JObject arguments)
     {
-        if (!AIToolCollector.ToolRegistry.TryGetValue(toolName, out var tool))
+        if (!AIToolCollector.ToolRegistry.Any(t => t.Key.function.name.Equals(toolName, StringComparison.OrdinalIgnoreCase)))
             throw new Exception($"Tool '{toolName}' not found.");
 
-        var method = tool.Method;
+        var tool = AIToolCollector.ToolRegistry.First(t => t.Key.function.name.Equals(toolName, StringComparison.OrdinalIgnoreCase));
+        var method = tool.Value;
         var parameters = method.GetParameters();
         var args = new object[parameters.Length];
 

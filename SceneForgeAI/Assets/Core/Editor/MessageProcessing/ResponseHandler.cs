@@ -7,33 +7,6 @@ using UnityEngine;
 
 public static class ResponseHandler
 {
-    [CanBeNull]
-    public static string GetJsonContent(string content)
-    {
-        var startIndex = content.IndexOf("```json", StringComparison.Ordinal) + 7;
-        if (startIndex < 7) return null; // No valid start found
-        
-        var endIndex = content.IndexOf("```", startIndex, StringComparison.Ordinal);
-        if (endIndex > startIndex)
-            return content.Substring(startIndex, endIndex - startIndex).Trim();
-        
-        return null;
-    }
-    
-    private static Dictionary<string, GameObject> BuildUidMap(GameObject[] selection = null)
-    {
-        if (selection == null || selection.Length == 0)
-        {
-            selection = Selection.gameObjects;
-        }
-        
-        return selection
-            .Select((obj, idx) => new { obj, index = idx })
-            .ToDictionary(pair => pair.index.ToString(), pair => pair.obj);
-    }
-    
-    public static SceneDiff[] GenerateDiffs(string json) => SceneDiffHandler.GetDiffFromScene(json, BuildUidMap());
-    
     public static void ApplyDiff(SceneDiff diff)
     {
         switch (diff.DiffType)

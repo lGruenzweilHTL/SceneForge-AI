@@ -17,22 +17,7 @@ public class OllamaMessageHandler : IMessageHandler
 
     public string Model { get; set; }
     
-    public IEnumerator GetChatCompletion(AIMessage[] history, Action<string> callback)
-    {
-        var body = new AIRequest
-        {
-            model = Model,
-            messages = history,
-            stream = false
-        };
-
-        var json = JsonConvert.SerializeObject(body);
-        yield return WebRequestUtility.SendPostRequest(_endpoint, json, new Dictionary<string, string>
-        {
-            ["Content-Type"] = "application/json"
-        }, request => OnRequestSuccess(request, callback), error => OnRequestError(error, callback));
-    }
-    public IEnumerator GetChatCompletionWithStream(AIMessage[] history, Action<string> onNewToken, Action onMessageCompleted)
+    public IEnumerator GetChatCompletionWithStream(AIMessage[] history, Tool[] tools, Action<string> onNewToken, Action<ToolCall[]> onMessageCompleted)
     {
         var body = new AIRequest
         {
@@ -56,7 +41,7 @@ public class OllamaMessageHandler : IMessageHandler
             }
             yield return null;
         }
-        onMessageCompleted?.Invoke();
+        onMessageCompleted?.Invoke(null); // TODO: handle tool calls if needed
     }
 
     private void OnRequestSuccess(UnityWebRequest request, Action<string> callback)

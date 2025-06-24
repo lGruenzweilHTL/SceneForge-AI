@@ -25,6 +25,20 @@ public class GroqStreamResponse
     {
         public string Role { get; set; }
         public string Content { get; set; }
+        public List<ToolCall> tool_calls { get; set; }
+    }
+    
+    public class ToolCall
+    {
+        public string Id { get; set; }
+        public string Type { get; set; }
+        public ToolCallFunction Function { get; set; }
+    }
+
+    public class ToolCallFunction
+    {
+        public string Name { get; set; }
+        public string Arguments { get; set; }
     }
 
     public class GroqXGroq

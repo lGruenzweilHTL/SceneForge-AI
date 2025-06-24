@@ -7,49 +7,11 @@ using Unity.Plastic.Newtonsoft.Json;
 public static class AIHandler
 {
     private const string SystemPrompt =
-        "You are a Unity scene-editing assistant. You are given two things:\n" +
-        "1. A JSON object representing a subset of a Unity scene (only relevant objects, with assigned UIDs).\n" +
-        "2. A user instruction describing what should change.\n\n" +
-        "Your task is to output ONLY the changes that need to be applied to the scene in JSON format.\n" +
-        "You must NOT output the full scene, only a minimal diff containing the modified values.\n\n" +
-        "Output Format Rules:\n" +
-        "Your JSON output must be in a fenced code block starting with ```json.\n" +
-        "- The top-level keys of your output must be object UIDs (as strings).\n" +
-        "- Under each UID, specify the component or section being modified. Use capitalized keys like \"Transform\" or the component type (e.g., \"Light2D\", \"Camera\").\n" +
-        "- Under each component, only include the fields that were changed, not the full component.\n" +
-        "- Represent vectors (Vector2, Vector3) and Color as arrays:\n" +
-        "  - Vector2: [x, y]\n" +
-        "  - Vector3: [x, y, z]\n" +
-        "  - Color: [r, g, b, a]\n" +
-        "- Do NOT modify the UID or component names.\n" +
-        "- If nothing needs to change, don't output any JSON.\n\n" +
-        "You may also include a summary of what you changed in your Response.\n\n" +
-        "Example input:\n" +
-        "(scene JSON excerpt)\n" +
-        "{\n" +
-        "  \"0\": {\n" +
-        "    \"uid\": \"0\",\n" +
-        "    \"name\": \"Global Light 2D\",\n" +
-        "    \"components\": [ ... ]\n" +
-        "    ...\n" +
-        "  }\n" +
-        "}\n\n" +
-        "User prompt:\n" +
-        "\"Increase the light intensity and move the light up by 2 units.\"\n\n" +
-        "Your output:\n" +
-        "I have moved to light up 2 Units and increased the light intensity to 2.\n\n" +
-        "```json\n" +
-        "{\n" +
-        "  \"0\": {\n" +
-        "    \"Light2D\": {\n" +
-        "      \"intensity\": 2.0\n" +
-        "    },\n" +
-        "    \"Transform\": {\n" +
-        "      \"position\": [0.0, 2.0, 0.0]\n" +
-        "    }\n" +
-        "  }\n" +
-        "}\n" +
-        "```\n\n";
+        "You are a helpful Unity scene-editing assistant\n" +
+        "You can answer user prompts using some predefined tools\n" +
+        "When you have everything you need, do NOT use any more tool calls\n" +
+        "Only use tools when you need to uuse them to answer the user's question\n" +
+        "Try to complete tasks using as few tool calls as possible\n";
 
     private static readonly ChatMessage SystemMessage = new()
     {
@@ -73,22 +35,22 @@ public static class AIHandler
 
     public static void SendMessageInChat(string prompt)
     {
-        var sceneJson = JsonConvert.SerializeObject(GameObjectSerializer.SerializeSelection(), Formatting.None);
-        string requestContent = "Scene JSON: " + sceneJson + "\n\nUser Prompt: " + prompt;
         var msg = new ChatMessage
         {
             Role = "user",
-            Content = requestContent,
+            Content = prompt,
         };
         _currentChat.History.Add(msg);
         var handler = _currentChat.MessageHandler;
-        var retriesLeft = AISettings.MaxErrorRetries;
         
-        SendMessage(handler, retriesLeft);
+        SendMessage(handler);
     }
 
-    private static void SendMessage(IMessageHandler handler, int retriesLeft)
+    private static void SendMessage(IMessageHandler handler, bool useTools = true)
     {
+        if (AIToolCollector.ToolRegistry.Count == 0)
+            AIToolCollector.UpdateRegistry();
+        
         var response = new ChatMessage
         {
             Role = "assistant",
@@ -96,58 +58,42 @@ public static class AIHandler
         };
         _currentChat.History.Add(response);
         EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletionWithStream(_currentChat.History
+                .SkipLast(1)
                 .Select(m => new AIMessage
                 {
                     role = m.Role,
                     content = m.Content,
+                    name = m.Name,
+                    tool_call_id = m.ToolCallId
                 })
                 .ToArray(),
+            useTools ? AIToolCollector.ToolRegistry.Keys.ToArray() : null,
             r => response.Content += r,
-            () => OnResponseReceived(response, retriesLeft)));
+            toolCalls => OnResponseReceived(response, toolCalls)));
     }
     
-    private static void OnResponseReceived(ChatMessage responseMessage, int retriesLeft)
+    private static void OnResponseReceived(ChatMessage responseMessage, ToolCall[] toolCalls)
     {
-        try
-        {
-            var jsonContent = ResponseHandler.GetJsonContent(responseMessage.Content);
-            responseMessage.Json = jsonContent;
-            responseMessage.Diffs = ResponseHandler.GenerateDiffs(jsonContent ?? "{ }");
-        }
-        catch (Exception e)
-        {
-            ProcessParsingError(e, retriesLeft);
-        }
-    }
+        responseMessage.Diffs = Array.Empty<SceneDiff>();
 
-    private static void ProcessParsingError(Exception e, int retriesLeft)
-    {
-        if (retriesLeft > 0)
+        if (toolCalls.Length > 0)
         {
-            _currentChat.History.Add(new ChatMessage
+            responseMessage.Content = $"Tool calls detected. Executing tools... ({string.Join(", ", toolCalls.Select(t => t.ToolName))})";
+            foreach (var toolCall in toolCalls)
             {
-                Role = "user",
-                Content = "An error occurred while processing the response: " + e.Message +
-                          "\nPlease try again keeping the same prompt and context.",
-                Display = false
-            });
-            
-            // Retry sending the message
-            SendMessage(_currentChat.MessageHandler, retriesLeft - 1);
-            return;
-        }
+                var result = AIToolInvoker.InvokeTool(toolCall.ToolName, toolCall.Arguments);
+                _currentChat.History.Add(new ChatMessage
+                {
+                    Display = true,
+                    Role = "tool",
+                    Name = toolCall.ToolName,
+                    Content = JsonConvert.SerializeObject(result, Formatting.Indented),
+                    ToolCallId = toolCall.Id
+                });
+            }
 
-        // If all retries are exhausted, log the error
-        UnityEngine.Debug.LogError($"Could not process message after {AISettings.MaxErrorRetries} retries: {e.Message}");
-        
-        // Add an info message to the chat history
-        _currentChat.History.Add(new ChatMessage
-        {
-            Role = "assistant",
-            Content = "Number of retries exceeded. " +
-                      "Please check the console for more details on the error.\n" +
-                      "If you think this is a bug, please report it on the SceneForge-AI GitHub repository."
-        });
+            SendMessage(_currentChat.MessageHandler, true);
+        }
     }
 
     public static ChatMessage[] GetCurrentChatHistory()

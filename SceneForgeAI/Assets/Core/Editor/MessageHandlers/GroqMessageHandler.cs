@@ -3,8 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Plastic.Newtonsoft.Json;
-using UnityEngine;
-using UnityEngine.Networking;
+using Unity.Plastic.Newtonsoft.Json.Linq;
 
 public class GroqMessageHandler : IMessageHandler
 {
@@ -19,28 +18,13 @@ public class GroqMessageHandler : IMessageHandler
     public string Model { get; set; }
     private readonly string _key;
 
-    public IEnumerator GetChatCompletion(AIMessage[] history, Action<string> callback)
+    public IEnumerator GetChatCompletionWithStream(AIMessage[] history, Tool[] tools, Action<string> onNewToken, Action<ToolCall[]> onMessageCompleted)
     {
         var body = new AIRequest
         {
             model = Model,
             messages = history,
-            stream = false
-        };
-
-        var json = JsonConvert.SerializeObject(body);
-        yield return WebRequestUtility.SendPostRequest(Endpoint, json, new Dictionary<string, string> {
-            ["Content-Type"] = "application/json",
-            ["Authorization"] = "Bearer " + _key
-        }, request => OnRequestSuccess(request, callback), error => OnRequestError(error, callback));
-    }
-
-    public IEnumerator GetChatCompletionWithStream(AIMessage[] history, Action<string> onNewToken, Action onMessageCompleted)
-    {
-        var body = new AIRequest
-        {
-            model = Model,
-            messages = history,
+            tools = tools?.ToList(),
             stream = true
         };
 
@@ -51,27 +35,42 @@ public class GroqMessageHandler : IMessageHandler
             ["Content-Type"] = "application/json",
             ["Authorization"] = "Bearer " + _key
         }, downloadHandler);
-        while (!operation.isDone)
+        while (!operation.isDone || downloadHandler.HasNewToken())
         {
             while (downloadHandler.HasNewToken())
             {
-                var token = downloadHandler.GetNextToken();
-                onNewToken?.Invoke(token.Choices[0].Delta.Content);
+                var choices = downloadHandler.GetNextToken().Choices;
+                if (choices == null || choices.Count == 0)
+                {
+                    continue; // Skip if no choices are available
+                }
+                var token = choices[0]; // Assuming we only care about the first choice
+                var content = token.Delta.Content;
+                var toolCalls = GetToolCalls(token);
+                if (toolCalls != null && toolCalls.Length > 0)
+                {
+                    onMessageCompleted?.Invoke(toolCalls);
+                    yield break; // Exit early if tool calls are present
+                }
+                if (content != null)
+                {
+                    onNewToken?.Invoke(content);
+                }
             }
             yield return null;
         }
-        onMessageCompleted?.Invoke();
+        
+        onMessageCompleted?.Invoke(Array.Empty<ToolCall>()); // Final call with any remaining text
     }
 
-
-    private void OnRequestSuccess(UnityWebRequest request, Action<string> callback)
+    private ToolCall[] GetToolCalls(GroqStreamResponse.Choice c)
     {
-        var response = JsonConvert.DeserializeObject<GroqResponse>(request.downloadHandler.text);
-        callback(response.Choices.FirstOrDefault()?.Message.Content ?? "No response from AI.");
-    }
-    private void OnRequestError(string error, Action<string> callback)
-    {
-        Debug.LogError($"Error sending message: {error}");
-        callback($"Error: {error}");
+        var calls = c.Delta.tool_calls ?? new List<GroqStreamResponse.ToolCall>();
+        return calls.Select(call => new ToolCall
+        {
+            ToolName = call.Function.Name,
+            Arguments = JObject.Parse(call.Function.Arguments),
+            Id = call.Id
+        }).ToArray();
     }
 }
