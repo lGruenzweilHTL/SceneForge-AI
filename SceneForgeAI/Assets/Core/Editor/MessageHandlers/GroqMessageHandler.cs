@@ -35,6 +35,7 @@ public class GroqMessageHandler : IMessageHandler
             ["Content-Type"] = "application/json",
             ["Authorization"] = "Bearer " + _key
         }, downloadHandler);
+        
         while (!operation.isDone || downloadHandler.HasNewToken())
         {
             while (downloadHandler.HasNewToken())
@@ -56,11 +57,15 @@ public class GroqMessageHandler : IMessageHandler
                 {
                     onNewToken?.Invoke(content);
                 }
+                if (token.Delta.Reasoning != null)
+                {
+                    onNewToken?.Invoke(token.Delta.Reasoning);
+                }
             }
             yield return null;
         }
         
-        onMessageCompleted?.Invoke(Array.Empty<ToolCall>()); // Final call with any remaining text
+        onMessageCompleted?.Invoke(Array.Empty<ToolCall>());
     }
 
     private ToolCall[] GetToolCalls(GroqStreamResponse.Choice c)

@@ -50,7 +50,7 @@ public static class AITools
     }
     
     [AITool("Gets information about a game object by its instance ID.")]
-    public static object GetObjectById(int instanceId)
+    public static object GetObjectById([AIToolParam("The instance id of the object")] int instanceId)
     {
         var obj = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None)
             .FirstOrDefault(o => o.GetInstanceID() == instanceId);
@@ -65,15 +65,24 @@ public static class AITools
             active = obj.activeSelf,
             tag = obj.tag,
             layer = LayerMask.LayerToName(obj.layer),
-            position = obj.transform.position,
-            rotation = obj.transform.rotation.eulerAngles,
-            scale = obj.transform.localScale,
+            position = SerializableVector3(obj.transform.position),
+            rotation = SerializableVector3(obj.transform.rotation.eulerAngles),
+            scale = SerializableVector3(obj.transform.localScale),
             components = obj.GetComponents<Component>()
                 .Select(c => new { type = c.GetType().Name, enabled = c is not Behaviour b || b.enabled })
                 .ToList()
         };
         
         return info;
+    }
+    private static object SerializableVector3(Vector3 v)
+    {
+        return new[]
+        {
+            v.x,
+            v.y,
+            v.z
+        };
     }
     
     [AITool("Returns the names of all scenes currently loaded in the editor.")]

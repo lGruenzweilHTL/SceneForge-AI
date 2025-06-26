@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Plastic.Newtonsoft.Json;
+using UnityEngine;
 using UnityEngine.Networking;
 
 public class StreamDownloadHandler<T> : DownloadHandlerScript
@@ -14,9 +15,21 @@ public class StreamDownloadHandler<T> : DownloadHandlerScript
         {
             if (!string.IsNullOrWhiteSpace(line))
             {
+                bool err = false;
+                
                 var cleaned = string.Join("", line.Trim().SkipWhile(c => c != '{'));
-                var response = JsonConvert.DeserializeObject<T>(cleaned);
-                if (response != null) tokens.Enqueue(response);
+                var response = JsonConvert.DeserializeObject<T>(cleaned, new JsonSerializerSettings
+                {
+                    NullValueHandling = NullValueHandling.Ignore,
+                    MissingMemberHandling = MissingMemberHandling.Ignore,
+                    Error = (sender, args) =>
+                    {
+                        Debug.LogWarning($"Error deserializing JSON: {args.ErrorContext.Error.Message}");
+                        args.ErrorContext.Handled = true; // Prevents the error from propagating
+                        err = true; // Mark as error
+                    }
+                });
+                if (response != null && !err) tokens.Enqueue(response);
             }
         }
         return true;

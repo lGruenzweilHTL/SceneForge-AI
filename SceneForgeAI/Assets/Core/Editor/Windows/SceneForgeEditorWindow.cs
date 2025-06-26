@@ -67,7 +67,7 @@ public class SceneForgeEditorWindow : EditorWindow
                 wordWrap = true,
                 margin = new RectOffset(0, 0, 0, 5),
             };
-            DynamicHeightSelectableLabel(message.Content, style);
+            DynamicHeightSelectableLabel(message.Name == null ? message.Content : "Executing tool: " + message.Name, style);
             GUILayout.EndVertical();
             GUILayout.Space(10);
         }

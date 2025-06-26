@@ -25,6 +25,7 @@ public class GroqStreamResponse
     {
         public string Role { get; set; }
         public string Content { get; set; }
+        public string Reasoning { get; set; }
         public List<ToolCall> tool_calls { get; set; }
     }
     

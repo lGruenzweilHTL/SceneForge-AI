@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Unity.Plastic.Newtonsoft.Json;
-using Unity.Plastic.Newtonsoft.Json.Linq;
+using UnityEditor;
 
 public static class AIToolCollector
 {
     // Keep a registry of tools for invocation
     public static Dictionary<Tool, MethodInfo> ToolRegistry { get; private set; } = new();
+    
+    [MenuItem("Tools/Update AI Tool Registry")]
     public static void UpdateRegistry()
     {
         ToolRegistry.Clear();
@@ -31,13 +32,17 @@ public static class AIToolCollector
                     parameters = new Tool.ToolFunctionParameters
                     {
                         type = "object",
-                        properties = method.GetParameters().ToDictionary(
-                            p => p.Name,
+                        properties = method
+                            .GetParameters()
+                            .Select(p => new {param = p, paramAttr = p.GetCustomAttribute<AIToolParamAttribute>() 
+                                                                     ?? throw new Exception($"Could not find AIToolParamAttribute for parameter {p.Name} in method {method.Name}")})
+                            .ToDictionary(
+                            p => p.param.Name,
                             p => new Tool.ToolFunctionPropertyData
                             {
-                                type = GetTypeName(p.ParameterType, out var enumNames),
-                                description = "not available", // TODO: provide better descriptions
-                                @enum = enumNames?.ToList()
+                                type = GetTypeName(p.param.ParameterType),
+                                description = p.paramAttr.Description,
+                                @enum = p.paramAttr.EnumNames?.ToList()
                             }),
                         required = method.GetParameters()
                             .Select(p => p.Name)
@@ -48,18 +53,12 @@ public static class AIToolCollector
         }
     }
 
-    private static string GetTypeName(Type type, out string[] enumNames)
+    private static string GetTypeName(Type type)
     {
-        enumNames = null;
-        if (type == typeof(string)) return "string";
+        if (type == typeof(string) || type.IsEnum) return "string";
         if (type == typeof(int)) return "integer";
         if (type == typeof(float) || type == typeof(double)) return "number";
         if (type == typeof(bool)) return "boolean";
-        if (type.IsEnum)
-        {
-            enumNames = type.GetEnumNames();
-            return "string"; // Enums are treated as strings in JSON schema
-        }
-        return null;
+        return "object";
     }
 }

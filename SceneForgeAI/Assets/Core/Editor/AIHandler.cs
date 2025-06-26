@@ -48,7 +48,7 @@ public static class AIHandler
 
     private static void SendMessage(IMessageHandler handler, bool useTools = true)
     {
-        if (AIToolCollector.ToolRegistry.Count == 0)
+        if (useTools && AIToolCollector.ToolRegistry.Count == 0)
             AIToolCollector.UpdateRegistry();
         
         var response = new ChatMessage
@@ -78,7 +78,6 @@ public static class AIHandler
 
         if (toolCalls.Length > 0)
         {
-            responseMessage.Content = $"Tool calls detected. Executing tools... ({string.Join(", ", toolCalls.Select(t => t.ToolName))})";
             foreach (var toolCall in toolCalls)
             {
                 var result = AIToolInvoker.InvokeTool(toolCall.ToolName, toolCall.Arguments);
@@ -92,7 +91,7 @@ public static class AIHandler
                 });
             }
 
-            SendMessage(_currentChat.MessageHandler, true);
+            SendMessage(_currentChat.MessageHandler);
         }
     }
 
