@@ -65,9 +65,10 @@ public class SceneForgeEditorWindow : EditorWindow
             var style = new GUIStyle(EditorStyles.textArea)
             {
                 wordWrap = true,
+                richText = true,
                 margin = new RectOffset(0, 0, 0, 5),
             };
-            DynamicHeightSelectableLabel(message.Name == null ? message.Content : "Executing tool: " + message.Name, style);
+            DynamicHeightSelectableLabel(GetLabelContent(message), style);
             GUILayout.EndVertical();
             GUILayout.Space(10);
         }
@@ -106,6 +107,11 @@ public class SceneForgeEditorWindow : EditorWindow
             AIHandler.SendMessageInChat(p);
         }
     }
+
+    private static string GetLabelContent(ChatMessage message) =>
+        message.Name == null
+            ? (message.Reasoning != null ? $"<i>Reasoning: {message.Reasoning}</i>\n" : "") +  message.Content
+            : "Executing tool: " + message.Name;
 
     private static void DynamicHeightSelectableLabel(string text, GUIStyle style)
     {

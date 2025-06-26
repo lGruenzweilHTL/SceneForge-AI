@@ -57,8 +57,8 @@ public static class AIHandler
             Content = "",
         };
         _currentChat.History.Add(response);
-        EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletionWithStream(_currentChat.History
-                .SkipLast(1)
+        EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletionWithStreamAndReasoning(_currentChat.History
+                .SkipLast(1) // Skip the just added response message
                 .Select(m => new AIMessage
                 {
                     role = m.Role,
@@ -68,7 +68,8 @@ public static class AIHandler
                 })
                 .ToArray(),
             useTools ? AIToolCollector.ToolRegistry.Keys.ToArray() : null,
-            r => response.Content += r,
+            t => response.Content += t,
+            rt => response.Reasoning += rt,
             toolCalls => OnResponseReceived(response, toolCalls)));
     }
     

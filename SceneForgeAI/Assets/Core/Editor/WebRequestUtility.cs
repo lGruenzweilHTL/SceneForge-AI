@@ -9,23 +9,12 @@ public static class WebRequestUtility
     public static IEnumerator SendPostRequest(string url, string body, Dictionary<string, string> headers = null,
         Action<UnityWebRequest> onSuccess = null, Action<string> onError = null)
     {
-        SendPostRequest(url, body, out var operation, headers, new DownloadHandlerBuffer());
-        if (!operation.isDone) yield return null;
+        var operation = SendPostRequest(url, body, headers, new DownloadHandlerBuffer());
+        while (!operation.isDone) yield return null;
         OnRequestCompleted(operation.webRequest, onSuccess, onError);
     }
-    private static void OnRequestCompleted(UnityWebRequest request, Action<UnityWebRequest> onSuccess, Action<string> onError)
-    {
-        if (request.result == UnityWebRequest.Result.Success)
-        {
-            onSuccess?.Invoke(request);
-        }
-        else
-        {
-            onError?.Invoke(request.error);
-        }
-    }
 
-    public static void SendPostRequest(string url, string body, out UnityWebRequestAsyncOperation operation, 
+    public static UnityWebRequestAsyncOperation SendPostRequest(string url, string body,
         Dictionary<string, string> headers = null, DownloadHandler downloadHandler = null)
     {
         var request = new UnityWebRequest(url, "POST");
@@ -40,6 +29,42 @@ public static class WebRequestUtility
             }
         }
         
-        operation = request.SendWebRequest();
+        return request.SendWebRequest();
+    }
+    
+    public static IEnumerator SendGetRequest(string url, Dictionary<string, string> headers = null,
+        Action<UnityWebRequest> onSuccess = null, Action<string> onError = null)
+    {
+        var operation = SendGetRequest(url, headers, new DownloadHandlerBuffer());
+        while (!operation.isDone) yield return null;
+        OnRequestCompleted(operation.webRequest, onSuccess, onError);
+    }
+
+    public static UnityWebRequestAsyncOperation SendGetRequest(string url,
+        Dictionary<string, string> headers = null, DownloadHandler downloadHandler = null)
+    {
+        var request = new UnityWebRequest(url, "GET");
+        request.downloadHandler = downloadHandler ?? new DownloadHandlerBuffer();
+        if (headers != null)
+        {
+            foreach (var (key, value) in headers) 
+            {
+                request.SetRequestHeader(key, value);
+            }
+        }
+        
+        return request.SendWebRequest();
+    }
+    
+    private static void OnRequestCompleted(UnityWebRequest request, Action<UnityWebRequest> onSuccess, Action<string> onError)
+    {
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            onSuccess?.Invoke(request);
+        }
+        else
+        {
+            onError?.Invoke(request.error);
+        }
     }
 }

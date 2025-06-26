@@ -9,7 +9,6 @@ public static class AIToolCollector
     // Keep a registry of tools for invocation
     public static Dictionary<Tool, MethodInfo> ToolRegistry { get; private set; } = new();
     
-    [MenuItem("Tools/Update AI Tool Registry")]
     public static void UpdateRegistry()
     {
         ToolRegistry.Clear();
