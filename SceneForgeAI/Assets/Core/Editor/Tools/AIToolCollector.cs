@@ -44,7 +44,10 @@ public static class AIToolCollector
                                 @enum = p.paramAttr.EnumNames?.ToList()
                             }),
                         required = method.GetParameters()
-                            .Select(p => p.Name)
+                            .Select(p => new {param = p, paramAttr = p.GetCustomAttribute<AIToolParamAttribute>() 
+                                                                     ?? throw new Exception($"Could not find AIToolParamAttribute for parameter {p.Name} in method {method.Name}")})
+                            .Where(p => !(p.paramAttr.IsOptional || p.param.IsOptional)) // Marked as optional and has a default value
+                            .Select(p => p.param.Name)
                             .ToList()
                     }
                 }

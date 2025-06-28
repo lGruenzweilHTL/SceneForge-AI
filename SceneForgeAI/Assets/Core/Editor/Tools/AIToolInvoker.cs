@@ -21,11 +21,18 @@ public static class AIToolInvoker
             var token = arguments.GetValue(param.Name, StringComparison.OrdinalIgnoreCase);
 
             if (token == null)
-                throw new ArgumentException($"Missing argument: {param.Name}");
-
-            args[i] = token.ToObject(param.ParameterType);
+            {
+                if (param.IsOptional)
+                    args[i] = param.DefaultValue;
+                else
+                    throw new ArgumentException($"Missing argument: {param.Name}");
+            }
+            else
+            {
+                args[i] = token.ToObject(param.ParameterType);
+            }
         }
 
-        return method.Invoke(null, args); // Static methods only
+        return method.Invoke(null, args); // Only static methods are supported
     }
 }
