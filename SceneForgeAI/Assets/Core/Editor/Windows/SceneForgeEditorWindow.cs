@@ -8,6 +8,7 @@ public class SceneForgeEditorWindow : EditorWindow
     private string _prompt;
     private Vector2 _scrollPosition;
     private int _currentChatIndex = 0;
+    private System.Collections.Generic.Dictionary<ChatMessage, bool> _reasoningFoldouts = new System.Collections.Generic.Dictionary<ChatMessage, bool>();
     
     [MenuItem("Tools/SceneForge AI")]
     public static void ShowWindow()
@@ -62,6 +63,24 @@ public class SceneForgeEditorWindow : EditorWindow
             }
 
             GUILayout.EndHorizontal();
+
+            // Reasoning Foldout
+            if (!string.IsNullOrEmpty(message.Reasoning))
+            {
+                _reasoningFoldouts.TryAdd(message, false);
+                _reasoningFoldouts[message] = EditorGUILayout.Foldout(_reasoningFoldouts[message], "Reasoning", true);
+                if (_reasoningFoldouts[message])
+                {
+                    var reasoningStyle = new GUIStyle(EditorStyles.helpBox)
+                    {
+                        wordWrap = true,
+                        fontStyle = FontStyle.Italic,
+                        margin = new RectOffset(0, 0, 0, 0),
+                    };
+                    EditorGUILayout.LabelField(message.Reasoning, reasoningStyle);
+                }
+            }
+
             var style = new GUIStyle(EditorStyles.textArea)
             {
                 wordWrap = true,
@@ -110,7 +129,7 @@ public class SceneForgeEditorWindow : EditorWindow
 
     private static string GetLabelContent(ChatMessage message) =>
         message.Name == null
-            ? (message.Reasoning != null ? $"<i>Reasoning: {message.Reasoning}</i>\n" : "") +  message.Content
+            ? message.Content
             : "Executing tool: " + message.Name;
 
     private static void DynamicHeightSelectableLabel(string text, GUIStyle style)
