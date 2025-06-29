@@ -63,7 +63,8 @@ public static class AITools
     }
     
     [AITool("Creates a primitive object in the current active scene.\n" +
-            "You can specify the type of primitive and its position, rotation, and scale.")]
+            "You can specify the type of primitive and its position, rotation, and scale.\n" +
+            "Returns the instance ID of the created object.")]
     public static object CreatePrimitive(
         [AIToolParam("The type of primitive to create", false, "cube", "sphere", "capsule", "cylinder", "plane", "quad")] string primitiveType,
         [AIToolParam("The name of the primitive", true)] string name = "NewPrimitive",
@@ -128,7 +129,7 @@ public static class AITools
     [AITool("Adds a component to a game object by its instance ID.")]
     public static object AddComponentToObject(
         [AIToolParam("The instance ID of the game object")] int instanceId,
-        [AIToolParam("The type of component to add (e.g. Rigidbody, BoxCollider)")] string componentType) // TODO: maybe add enum for all available components
+        [AIToolParam("The type of component to add (e.g. Rigidbody, BoxCollider)")] string componentType)
     {
         var obj = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None)
             .FirstOrDefault(o => o.GetInstanceID() == instanceId);
@@ -148,6 +149,18 @@ public static class AITools
                    "Maybe the component is already present";
         
         return $"Added {componentType} to {obj.name} (ID: {obj.GetInstanceID()})";
+    }
+    
+    [AITool("Gets all user-made components in the project.")]
+    public static object GetAllUserComponents()
+    {
+        var components = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(a => a.GetTypes())
+            .Where(t => t.IsSubclassOf(typeof(Component)) && !t.IsAbstract && !t.IsGenericType &&
+                        (t.Namespace == null || !t.Namespace.StartsWith("UnityEngine.")))
+            .Select(t => t.Name);
+
+        return components.ToArray();
     }
     
     [AITool("Gets the names of all prefabs in the project")]

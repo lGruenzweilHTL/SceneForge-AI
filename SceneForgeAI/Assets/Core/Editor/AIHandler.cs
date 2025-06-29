@@ -10,7 +10,7 @@ public static class AIHandler
         "You are a helpful Unity scene-editing assistant\n" +
         "You can answer user prompts using some predefined tools\n" +
         "When you have everything you need, do NOT use any more tool calls\n" +
-        "Only use tools when you need to uuse them to answer the user's question\n" +
+        "Only use tools when you need to use them to answer the user's question\n" +
         "Try to complete tasks using as few tool calls as possible\n";
 
     private static readonly ChatMessage SystemMessage = new()
