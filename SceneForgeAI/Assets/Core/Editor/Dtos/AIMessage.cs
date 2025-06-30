@@ -8,4 +8,6 @@ public class AIMessage
     public string name { get; set; } = null; // Optional, used for tool calls
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public string tool_call_id { get; set; } = null; // Optional, used to track tool calls
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public string[] image_urls { get; set; } = null; // Optional, used for vision requests
 }

@@ -21,6 +21,8 @@ public class OllamaMessageHandler : IMessageHandler
     public string Model { get; set; }
     public bool StreamSupported => true;
     public bool ReasoningSupported => false; // Ollama does not support reasoning in the same way as some other providers
+    public bool ImagesSupported => false;
+
     public IEnumerator FetchModels(Action<string[]> onModelsFetched)
     {
         var downloadHandler = new DownloadHandlerBuffer();

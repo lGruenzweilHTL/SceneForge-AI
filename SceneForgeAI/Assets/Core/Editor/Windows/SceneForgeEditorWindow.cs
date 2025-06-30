@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -7,8 +7,9 @@ public class SceneForgeEditorWindow : EditorWindow
 {
     private string _prompt;
     private Vector2 _scrollPosition;
+    private List<string> _images = new();
     private int _currentChatIndex = 0;
-    private System.Collections.Generic.Dictionary<ChatMessage, bool> _reasoningFoldouts = new System.Collections.Generic.Dictionary<ChatMessage, bool>();
+    private Dictionary<ChatMessage, bool> _reasoningFoldouts = new();
     
     [MenuItem("Tools/SceneForge AI")]
     public static void ShowWindow()
@@ -108,7 +109,11 @@ public class SceneForgeEditorWindow : EditorWindow
                             GUI.GetNameOfFocusedControl() == controlName &&
                             !Event.current.shift;
 
+        GUILayout.BeginHorizontal();
         bool shouldSendPrompt = GUILayout.Button("Send Prompt") || enterPressed;
+        if (GUILayout.Button("Attach Image" + (_images.Any() ? $" ({_images.Count})" : ""), GUILayout.Width(120))) 
+            _images.Add(ImageUtility.SelectAndEncodeImage());
+        GUILayout.EndHorizontal();
 
         if (shouldSendPrompt)
         {
@@ -123,7 +128,8 @@ public class SceneForgeEditorWindow : EditorWindow
 
             var p = _prompt.TrimEnd('\n', '\r');
             _prompt = string.Empty;
-            AIHandler.SendMessageInChat(p);
+            AIHandler.SendMessageInChat(p, _images.ToArray());
+            _images.Clear();
         }
     }
 

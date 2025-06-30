@@ -6,6 +6,7 @@ public interface IMessageHandler
     string Model { get; set; }
     bool StreamSupported { get; }
     bool ReasoningSupported { get; }
+    bool ImagesSupported { get; }
     
     IEnumerator FetchModels(Action<string[]> onModelsFetched);
     

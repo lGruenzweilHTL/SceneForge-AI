@@ -24,6 +24,7 @@ public class GroqMessageHandler : IMessageHandler
     public string Model { get; set; }
     public bool StreamSupported => true;
     public bool ReasoningSupported => true;
+    public bool ImagesSupported => Model is "meta-llama/llama-4-scout-17b-16e-instruct" or "meta-llama/llama-4-maverick-17b-128e-instruct";
 
     public IEnumerator FetchModels(Action<string[]> onModelsFetched)
     {
@@ -95,10 +96,10 @@ public class GroqMessageHandler : IMessageHandler
     public IEnumerator GetChatCompletionWithStreamAndReasoning(AIMessage[] history, Tool[] tools, Action<string> onNewToken,
         Action<string> onNewReasoningToken, Action<ToolCall[]> onMessageCompleted)
     {
-        var body = new AIRequest
+        var body = new
         {
             model = Model,
-            messages = history,
+            messages = history.Select(GetVisionMessage).ToArray(),
             tools = tools?.ToList(),
             stream = true
         };
@@ -138,6 +139,29 @@ public class GroqMessageHandler : IMessageHandler
         }
         
         onMessageCompleted?.Invoke(Array.Empty<ToolCall>());
+    }
+
+    private object GetVisionMessage(AIMessage msg)
+    {
+        return new
+        {
+            msg.role,
+            content = (object)(msg.image_urls == null || msg.image_urls.Length == 0 || !ImagesSupported
+                ? msg.content
+                : new List<object>
+                {
+                    new
+                    {
+                        type = "text",
+                        text = msg.content
+                    }
+                }
+                .Concat(msg.image_urls.Select(img => new
+                {
+                    type = "image_url",
+                    image_url = new { url = img }
+                })))
+        };
     }
 
     private static ToolCall[] GetToolCalls(GroqStreamResponse.Choice c)

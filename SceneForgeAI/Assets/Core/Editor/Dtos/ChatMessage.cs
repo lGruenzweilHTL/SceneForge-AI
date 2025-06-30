@@ -11,4 +11,5 @@ public class ChatMessage
     public bool Display = true;
     public string ToolCallId = null; // Used to track tool calls
     public string Name = null; // Used for tool calls to identify the tool
+    public string[] Images = null; // Used for image messages
 }

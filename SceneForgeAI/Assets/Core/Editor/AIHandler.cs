@@ -33,12 +33,13 @@ public static class AIHandler
 
     private static Chat _currentChat = _chats[0];
 
-    public static void SendMessageInChat(string prompt)
+    public static void SendMessageInChat(string prompt, string[] images = null)
     {
         var msg = new ChatMessage
         {
             Role = "user",
             Content = prompt,
+            Images = images
         };
         _currentChat.History.Add(msg);
         var handler = _currentChat.MessageHandler;
@@ -64,7 +65,8 @@ public static class AIHandler
                     role = m.Role,
                     content = m.Content,
                     name = m.Name,
-                    tool_call_id = m.ToolCallId
+                    tool_call_id = m.ToolCallId,
+                    image_urls = m.Images
                 })
                 .ToArray(),
             useTools ? AIToolCollector.ToolRegistry.Keys.ToArray() : null,
