@@ -104,7 +104,10 @@ public class GroqMessageHandler : IMessageHandler
             stream = true
         };
 
-        var json = JsonConvert.SerializeObject(body);
+        var json = JsonConvert.SerializeObject(body, new JsonSerializerSettings
+        {
+            NullValueHandling = NullValueHandling.Ignore
+        });
         var downloadHandler = new StreamDownloadHandler<GroqStreamResponse>();
         var operation = WebRequestUtility.SendPostRequest(Endpoint, json, new Dictionary<string, string>
         {
@@ -146,6 +149,8 @@ public class GroqMessageHandler : IMessageHandler
         return new
         {
             msg.role,
+            msg.tool_call_id,
+            msg.name,
             content = (object)(msg.image_urls == null || msg.image_urls.Length == 0 || !ImagesSupported
                 ? msg.content
                 : new List<object>

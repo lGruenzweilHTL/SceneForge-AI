@@ -111,8 +111,10 @@ public class SceneForgeEditorWindow : EditorWindow
 
         GUILayout.BeginHorizontal();
         bool shouldSendPrompt = GUILayout.Button("Send Prompt") || enterPressed;
+        EditorGUI.BeginDisabledGroup(!AIHandler.Chats[_currentChatIndex].MessageHandler.ImagesSupported);
         if (GUILayout.Button("Attach Image" + (_images.Any() ? $" ({_images.Count})" : ""), GUILayout.Width(120))) 
             _images.Add(ImageUtility.SelectAndEncodeImage());
+        EditorGUI.EndDisabledGroup();
         GUILayout.EndHorizontal();
 
         if (shouldSendPrompt)
