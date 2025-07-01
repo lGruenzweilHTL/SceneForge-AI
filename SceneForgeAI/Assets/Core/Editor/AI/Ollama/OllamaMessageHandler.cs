@@ -62,7 +62,7 @@ public class OllamaMessageHandler : IMessageHandler
         };
 
         var json = JsonConvert.SerializeObject(body);
-        var downloadHandler = new StreamDownloadHandler<AIStreamResponse>();
+        var downloadHandler = new StreamDownloadHandler<AIStreamResponse, int>();
         var operation = WebRequestUtility.SendPostRequest(_endpoint, json, new Dictionary<string, string>
         {
             ["Content-Type"] = "application/json"

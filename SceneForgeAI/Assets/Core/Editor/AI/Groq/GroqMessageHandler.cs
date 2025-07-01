@@ -108,7 +108,14 @@ public class GroqMessageHandler : IMessageHandler
         {
             NullValueHandling = NullValueHandling.Ignore
         });
-        var downloadHandler = new StreamDownloadHandler<GroqStreamResponse>();
+        var downloadHandler = new StreamDownloadHandler<GroqStreamResponse, GroqErrorResponse>(
+            line => !line.StartsWith("data"));
+        downloadHandler.OnError += err =>
+        {
+            Debug.LogError($"Error in request: {err.error.message}");
+            onMessageCompleted?.Invoke(Array.Empty<ToolCall>());
+        };
+        
         var operation = WebRequestUtility.SendPostRequest(Endpoint, json, new Dictionary<string, string>
         {
             ["Content-Type"] = "application/json",

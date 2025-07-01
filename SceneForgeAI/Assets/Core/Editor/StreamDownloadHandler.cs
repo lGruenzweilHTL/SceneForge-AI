@@ -1,13 +1,21 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Plastic.Antlr3.Runtime.Misc;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class StreamDownloadHandler<T> : DownloadHandlerScript
+public class StreamDownloadHandler<T, TError> : DownloadHandlerScript
 {
+    public System.Action<TError> OnError;
     private readonly Queue<T> tokens = new();
     private string incompleteLine = "";
+    private System.Func<string, bool> errorOnLine;
+    
+    public StreamDownloadHandler(System.Func<string, bool> detectError = null)
+    {
+        errorOnLine = detectError;
+    }
 
     protected override bool ReceiveData(byte[] data, int dataLength)
     {
@@ -35,8 +43,7 @@ public class StreamDownloadHandler<T> : DownloadHandlerScript
             if (!string.IsNullOrWhiteSpace(line))
             {
                 bool err = false;
-                var cleaned = string.Join("", line.Trim().SkipWhile(c => c != '{'));
-                var response = JsonConvert.DeserializeObject<T>(cleaned, new JsonSerializerSettings
+                var settings = new JsonSerializerSettings
                 {
                     NullValueHandling = NullValueHandling.Ignore,
                     MissingMemberHandling = MissingMemberHandling.Ignore,
@@ -46,8 +53,24 @@ public class StreamDownloadHandler<T> : DownloadHandlerScript
                         args.ErrorContext.Handled = true;
                         err = true;
                     }
-                });
-                if (response != null && !err) tokens.Enqueue(response);
+                };
+                if (err) continue;
+                
+                var cleaned = string.Join("", line.Trim().SkipWhile(c => c != '{'));
+                if (errorOnLine != null && errorOnLine(cleaned))
+                {
+                    var errorResponse = JsonConvert.DeserializeObject<TError>(cleaned, settings);
+                    if (errorResponse != null)
+                    {
+                        OnError?.Invoke(errorResponse);
+                        continue;
+                    }
+                    Debug.LogWarning($"Failed to deserialize error response: {cleaned}");
+                    continue;
+                }
+                
+                var response = JsonConvert.DeserializeObject<T>(cleaned, settings);
+                if (response != null) tokens.Enqueue(response);
             }
         }
         return true;
