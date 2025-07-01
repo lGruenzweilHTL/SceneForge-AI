@@ -18,7 +18,6 @@ public class GroqMessageHandler : IMessageHandler
     private const string Endpoint = "https://api.groq.com/openai/v1/chat/completions";
     private const string ModelsEndpoint = "https://api.groq.com/openai/v1/models";
     private readonly string _key;
-    private IMessageHandler _messageHandlerImplementation;
     private string AuthString => "Bearer " + _key;
 
     public string Model { get; set; }
@@ -58,10 +57,10 @@ public class GroqMessageHandler : IMessageHandler
 
     public IEnumerator GetChatCompletionWithReasoning(AIMessage[] history, Tool[] tools, Action<string, string, ToolCall[]> onMessageCompleted)
     {
-        var body = new AIRequest
+        var body = new
         {
             model = Model,
-            messages = history,
+            messages = history.Select(GetVisionMessage).ToArray(),
             tools = tools?.ToList(),
             stream = false
         };

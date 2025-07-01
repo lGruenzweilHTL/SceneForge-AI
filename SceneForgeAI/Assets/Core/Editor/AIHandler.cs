@@ -137,7 +137,7 @@ public static class AIHandler
     {
         return AISettings.AIType switch
         {
-            AIType.Ollama => new OllamaMessageHandler(AISettings.OllamaUrl, AISettings.OllamaModel),
+            AIType.Ollama => throw new NotImplementedException("Ollama does not support tool calls."),
             AIType.Groq => new GroqMessageHandler(AISettings.GroqApiKey, AISettings.GroqModel),
             AIType.OpenAI => throw new NotImplementedException("OpenAI support is not implemented yet."),
             _ => throw new ArgumentOutOfRangeException("Unsupported AI type: " + AISettings.AIType)
