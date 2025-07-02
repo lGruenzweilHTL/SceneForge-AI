@@ -57,7 +57,7 @@ public class StreamDownloadHandler<T, TError> : DownloadHandlerScript
                 if (err) continue;
                 
                 var cleaned = string.Join("", line.Trim().SkipWhile(c => c != '{'));
-                if (errorOnLine != null && errorOnLine(cleaned))
+                if (errorOnLine != null && errorOnLine(line))
                 {
                     var errorResponse = JsonConvert.DeserializeObject<TError>(cleaned, settings);
                     if (errorResponse != null)
