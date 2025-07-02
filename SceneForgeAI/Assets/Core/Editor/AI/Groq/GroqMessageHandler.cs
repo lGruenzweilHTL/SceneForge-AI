@@ -22,7 +22,6 @@ public class GroqMessageHandler : IMessageHandler
 
     public string Model { get; set; }
     public bool StreamSupported => true;
-    public bool ReasoningSupported => true;
     public bool ImagesSupported => Model is "meta-llama/llama-4-scout-17b-16e-instruct" or "meta-llama/llama-4-maverick-17b-128e-instruct";
 
     public IEnumerator FetchModels(Action<string[]> onModelsFetched)
@@ -47,15 +46,7 @@ public class GroqMessageHandler : IMessageHandler
         }
     }
 
-    public IEnumerator GetChatCompletion(AIMessage[] history, Tool[] tools, Action<string, ToolCall[]> onMessageCompleted)
-    {
-        yield return GetChatCompletionWithReasoning(history, tools, (content, reasoning, toolCalls) =>
-        {
-            onMessageCompleted?.Invoke(content, toolCalls);
-        });
-    }
-
-    public IEnumerator GetChatCompletionWithReasoning(AIMessage[] history, Tool[] tools, Action<string, string, ToolCall[]> onMessageCompleted)
+    public IEnumerator GetChatCompletion(AIMessage[] history, Tool[] tools, Action<string, string, ToolCall[]> onMessageCompleted)
     {
         var body = new
         {
@@ -87,12 +78,7 @@ public class GroqMessageHandler : IMessageHandler
         }
     }
 
-    public IEnumerator GetChatCompletionWithStream(AIMessage[] history, Tool[] tools, Action<string> onNewToken, Action<ToolCall[]> onMessageCompleted)
-    {
-        yield return GetChatCompletionWithStreamAndReasoning(history, tools, onNewToken, null, onMessageCompleted);
-    }
-
-    public IEnumerator GetChatCompletionWithStreamAndReasoning(AIMessage[] history, Tool[] tools, Action<string> onNewToken,
+    public IEnumerator GetChatCompletionStreamed(AIMessage[] history, Tool[] tools, Action<string> onNewToken,
         Action<string> onNewReasoningToken, Action<ToolCall[]> onMessageCompleted)
     {
         var body = new

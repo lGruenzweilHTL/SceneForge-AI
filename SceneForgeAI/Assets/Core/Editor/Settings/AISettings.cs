@@ -12,6 +12,7 @@ public static class AISettings
     private const string OpenAIModelKey = "SceneForgeAI_OpenAIModel";
     private const string AllowObjectCreationKey = "SceneForgeAI_AllowObjectCreation";
     private const string AllowComponentCreationKey = "SceneForgeAI_AllowComponentCreation";
+    private const string PreferStreamKey = "SceneForgeAI_PreferStream";
 
     public static string OpenAIApiKey
     {
@@ -65,5 +66,11 @@ public static class AISettings
     {
         get => EditorPrefs.GetBool(AllowComponentCreationKey, true);
         set => EditorPrefs.SetBool(AllowComponentCreationKey, value);
+    }
+    
+    public static bool PreferStream
+    {
+        get => EditorPrefs.GetBool(PreferStreamKey, true);
+        set => EditorPrefs.SetBool(PreferStreamKey, value);
     }
 }

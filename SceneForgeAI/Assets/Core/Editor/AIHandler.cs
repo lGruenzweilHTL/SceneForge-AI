@@ -58,21 +58,40 @@ public static class AIHandler
             Content = "",
         };
         _currentChat.History.Add(response);
-        EditorCoroutineUtility.StartCoroutineOwnerless(handler.GetChatCompletionWithStreamAndReasoning(_currentChat.History
-                .SkipLast(1) // Skip the just added response message
-                .Select(m => new AIMessage
-                {
-                    role = m.Role,
-                    content = m.Content,
-                    name = m.Name,
-                    tool_call_id = m.ToolCallId,
-                    image_urls = m.Images
-                })
+        EditorCoroutineUtility.StartCoroutineOwnerless(AISettings.PreferStream && handler.StreamSupported
+            ? handler.GetChatCompletionStreamed(_currentChat.History
+                    .SkipLast(1) // Skip the just added response message
+                    .Select(m => new AIMessage
+                    {
+                        role = m.Role,
+                        content = m.Content,
+                        name = m.Name,
+                        tool_call_id = m.ToolCallId,
+                        image_urls = m.Images
+                    })
+                    .ToArray(),
+                useTools ? AIToolCollector.ToolRegistry.Keys.ToArray() : null,
+                t => response.Content += t,
+                rt => response.Reasoning += rt,
+                toolCalls => OnResponseReceived(response, toolCalls))
+            : handler.GetChatCompletion(_currentChat.History
+                .SkipLast(1). // Skip the just added response message
+                Select(m => new AIMessage
+                    {
+                        role = m.Role,
+                        content = m.Content,
+                        name = m.Name,
+                        tool_call_id = m.ToolCallId,
+                        image_urls = m.Images
+                    })
                 .ToArray(),
-            useTools ? AIToolCollector.ToolRegistry.Keys.ToArray() : null,
-            t => response.Content += t,
-            rt => response.Reasoning += rt,
-            toolCalls => OnResponseReceived(response, toolCalls)));
+                useTools ? AIToolCollector.ToolRegistry.Keys.ToArray() : null,
+                (content, reasoning, toolCalls) =>
+                {
+                    response.Content = content;
+                    response.Reasoning = reasoning;
+                    OnResponseReceived(response, toolCalls);
+                }));
     }
     
     private static void OnResponseReceived(ChatMessage responseMessage, ToolCall[] toolCalls)

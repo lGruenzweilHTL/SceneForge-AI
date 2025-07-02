@@ -72,8 +72,14 @@ public class SettingsEditorWindow : EditorWindow
     {
         GUILayout.Space(10);
         GUILayout.Label("Advanced Settings", HeaderStyles.SubheaderStyle);
-        
+
         AISettings.AllowObjectCreation = EditorGUILayout.Toggle("Allow Object Creation", AISettings.AllowObjectCreation);
         AISettings.AllowComponentCreation = EditorGUILayout.Toggle("Allow Component Creation", AISettings.AllowComponentCreation);
+        AISettings.PreferStream = EditorGUILayout.Toggle(
+            new GUIContent("Prefer Streaming",
+                "Use streaming for response when available.\n" +
+                "With this setting disabled, the response will only be rendered when it's completed entirely. " +
+                "The load on the network will also be reduced."),
+            AISettings.PreferStream);
     }
 }
