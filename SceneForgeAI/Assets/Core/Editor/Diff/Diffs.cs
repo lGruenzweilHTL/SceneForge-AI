@@ -1,7 +1,8 @@
 public abstract class SceneDiff
 {
-    public int InstanceId { get; set; }
+    public int? InstanceId { get; set; }
     public abstract int Priority { get; }
+    public string TempId { get; set; } // TODO: implement temp id functionality: issue #19
 }
 
 public class CreateObjectDiff : SceneDiff
@@ -21,30 +22,31 @@ public class RemoveObjectDiff : SceneDiff
     
     public override string ToString()
     {
-        return "RemoveObjectDiff: " + InstanceId;
+        return "RemoveObjectDiff: " + (InstanceId.HasValue ? InstanceId.ToString() : TempId);
     }
 }
-public class AddComponentDiff : SceneDiff
+public class AddComponentDiff : SceneDiff, IComponentDiff
 {
     public override int Priority => 2; // Medium priority for added components
     public string ComponentType { get; set; }
     
     public override string ToString()
     {
-        return "AddComponentDiff: " + ComponentType + " to id " + InstanceId;
+        return "AddComponentDiff: " + ComponentType;
     }
 }
-public class RemoveComponentDiff : SceneDiff
+public class RemoveComponentDiff : SceneDiff, IComponentDiff
 {
     public override int Priority => 2; // Medium priority for removed components
     public string ComponentType { get; set; }
     
     public override string ToString()
     {
-        return "RemoveComponentDiff: " + ComponentType + " from id " + InstanceId;
+        return "RemoveComponentDiff: " + ComponentType;
     }
 }
-public class UpdatePropertyDiff : SceneDiff
+
+public class UpdatePropertyDiff : SceneDiff, IComponentDiff
 {
     public override int Priority => 3; // Low priority for property updates
     public string ComponentType { get; set; }
@@ -54,6 +56,11 @@ public class UpdatePropertyDiff : SceneDiff
     
     public override string ToString()
     {
-        return $"UpdatePropertyDiff: {NewValue} for {PropertyName} on {ComponentType} on object {InstanceId}";
+        return $"UpdatePropertyDiff: {PropertyName} {OldValue}\u2192{NewValue}";
     }
+}
+
+public interface IComponentDiff
+{
+    string ComponentType { get; }
 }

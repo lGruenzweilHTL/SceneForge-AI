@@ -4,7 +4,7 @@ public static class ResponseHandler
 {
     public static void ApplyDiff(SceneDiff diff)
     {
-        var gameObject = ObjectUtility.FindByInstanceId(diff.InstanceId);
+        var gameObject = ObjectUtility.FindByInstanceId((int)diff.InstanceId!);
         if (diff is UpdatePropertyDiff propDiff)
         {
             var component = gameObject.GetComponent(propDiff.ComponentType);

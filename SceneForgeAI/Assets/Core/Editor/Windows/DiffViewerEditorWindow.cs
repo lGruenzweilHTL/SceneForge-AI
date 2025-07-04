@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -7,26 +6,31 @@ using Object = UnityEngine.Object;
 
 public class DiffViewerEditorWindow : EditorWindow
 {
-    private (SceneDiff diff, bool selected)[] _diffs = { };
-    private Dictionary<GameObject, bool> _goFoldouts = new();
-    private Dictionary<(GameObject, Type), bool> _compFoldouts = new();
-    private Dictionary<GameObject, bool> _goEnabled = new();
-    private Dictionary<(GameObject, Type), bool> _compEnabled = new();
-    
-    private static Rect ToggleRect() => GUILayoutUtility.GetRect(18, 18, GUILayout.Width(18));
-    private static Rect FoldoutRect(string name) => GUILayoutUtility.GetRect(
-        new GUIContent(name), EditorStyles.foldout, GUILayout.ExpandWidth(true)
-    );
-    
+    private SceneDiff[] _diffs = { };
+    private Dictionary<int, bool> _goFoldouts = new();
+    private Dictionary<(int groupKey, string componentType), bool> _componentFoldouts = new();
+    private Dictionary<SceneDiff, bool> _diffSelections = new();
+
+    [MenuItem("Tools/Diff/Demo")]
+    public static void ShowDemoWindow()
+    {
+        var diffs = new SceneDiff[]
+        {
+            new CreateObjectDiff { Name = "TestObject", TempId = "obj1" },
+            new AddComponentDiff { TempId = "obj1", ComponentType = "BoxCollider" },
+            new UpdatePropertyDiff { TempId = "obj1", ComponentType = "BoxCollider", PropertyName = "isTrigger", OldValue = false, NewValue = true },
+            new AddComponentDiff { TempId = "obj1", ComponentType = "Health" }
+        };
+        ShowWindow(diffs);
+    }
+
     public static void ShowWindow(SceneDiff[] diffs)
     {
         var window = GetWindow<DiffViewerEditorWindow>("Diff Viewer");
-        window.minSize = new Vector2(200, 100);
+        window.minSize = new Vector2(350, 250);
         window.Initialize(diffs);
-
         window.Show();
     }
-
 
     private void OnGUI()
     {
@@ -37,24 +41,57 @@ public class DiffViewerEditorWindow : EditorWindow
             return;
         }
 
-        EditorGUILayout.LabelField("Scene Differences", HeaderStyles.HeaderStyle);
+        EditorGUILayout.LabelField("Scene Differences", HeaderStyles.SubheaderStyle);
         EditorGUILayout.Space();
 
-        var diffsByObject = _diffs
-            .GroupBy(pair => pair.diff.InstanceId)
-            .ToList();
+        var diffsByObject = _diffs.GroupBy(diff => diff.InstanceId ?? diff.TempId?.GetHashCode() ?? 0);
 
-        foreach (var grouping in diffsByObject)
+        foreach (var group in diffsByObject)
         {
-            var gameObject = ObjectUtility.FindByInstanceId(grouping.Key);
-            GUILayout.Label(gameObject?.name ?? "Undefined", EditorStyles.boldLabel);
+            int groupKey = group.Key;
+            string label = GetLabelForGroup(group.First());
 
-            for (int i = 0; i < grouping.Count(); i++)
+            _goFoldouts.TryAdd(groupKey, true);
+            _goFoldouts[groupKey] = EditorGUILayout.Foldout(_goFoldouts[groupKey], label, true);
+
+            if (_goFoldouts[groupKey])
             {
-                var diff = grouping.ElementAt(i);
-                GUILayout.BeginHorizontal();
-                diff.selected = GUI.Toggle(ToggleRect(), diff.selected, "");
-                GUILayout.Label(diff.diff.ToString(), EditorStyles.boldLabel);
+                EditorGUI.indentLevel++;
+
+                var createDiff = group.FirstOrDefault(d => d is CreateObjectDiff);
+                bool objectEnabled = createDiff == null || IsDiffSelected(createDiff);
+
+                foreach (var compGroup in group
+                    .GroupBy(d => (d as IComponentDiff)?.ComponentType ?? string.Empty))
+                {
+                    string compType = compGroup.Key;
+                    var compCreate = compGroup.FirstOrDefault(d => d is AddComponentDiff);
+                    bool compEnabled = compCreate == null || IsDiffSelected(compCreate);
+
+                    bool isMultiDiffComponent = !string.IsNullOrEmpty(compType) && compGroup.Count() > 1;
+
+                    if (isMultiDiffComponent)
+                    {
+                        var foldoutKey = (groupKey, compType);
+                        _componentFoldouts.TryAdd(foldoutKey, true);
+                        _componentFoldouts[foldoutKey] = EditorGUILayout.Foldout(_componentFoldouts[foldoutKey], compType, true);
+
+                        if (_componentFoldouts[foldoutKey])
+                        {
+                            EditorGUI.indentLevel++;
+                            foreach (var diff in compGroup)
+                                DrawDiffLine(diff, objectEnabled && compEnabled);
+                            EditorGUI.indentLevel--;
+                        }
+                    }
+                    else
+                    {
+                        foreach (var diff in compGroup)
+                            DrawDiffLine(diff, objectEnabled && compEnabled);
+                    }
+                }
+
+                EditorGUI.indentLevel--;
             }
         }
 
@@ -65,33 +102,99 @@ public class DiffViewerEditorWindow : EditorWindow
             Close();
         }
     }
-    
-    #region Diff System
+
+    #region UI Helpers
+
+    private void DrawDiffLine(SceneDiff diff, bool parentEnabled)
+    {
+        EditorGUILayout.BeginHorizontal();
+
+        bool isRootToggle = diff is CreateObjectDiff or RemoveObjectDiff;
+        bool allowToggle = isRootToggle || parentEnabled;
+
+        EditorGUI.BeginDisabledGroup(!allowToggle);
+
+        bool current = IsDiffSelected(diff);
+        bool updated = EditorGUILayout.Toggle(current, GUILayout.Width(18));
+        if (updated != current) _diffSelections[diff] = updated;
+        
+        GUILayout.Space(EditorGUI.indentLevel * 15);
+
+        GUILayout.Label(GetIconForDiff(diff), GUILayout.Width(18), GUILayout.Height(18));
+
+        GUI.color = GetColorForDiff(diff);
+        EditorGUILayout.LabelField(diff.ToString());
+        GUI.color = Color.white;
+
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private bool IsDiffSelected(SceneDiff diff) =>
+        _diffSelections.TryGetValue(diff, out var selected) && selected;
+
+    #endregion
+
+    #region Init
 
     private void Initialize(SceneDiff[] diffs)
     {
-        // Filter out all diffs that don't actually change anything, default selections to true
         _diffs = diffs
-            .Where(d => d is not UpdatePropertyDiff propDiff || 
-                        (propDiff.OldValue != null && propDiff.NewValue != null &&
-                         !propDiff.OldValue.Equals(propDiff.NewValue)))
-            .Select(diff => (diff, true))
+            .Where(d => d is not UpdatePropertyDiff prop ||
+                        (prop.OldValue != null && prop.NewValue != null && !prop.OldValue.Equals(prop.NewValue)))
             .ToArray();
+
         _goFoldouts.Clear();
-        _compFoldouts.Clear();
+        _componentFoldouts.Clear();
+        _diffSelections = _diffs.ToDictionary(d => d, _ => true);
+    }
+
+    #endregion
+
+    #region Utility
+
+    private string GetLabelForGroup(SceneDiff diff)
+    {
+        if (diff.InstanceId.HasValue)
+        {
+            Object obj = EditorUtility.InstanceIDToObject(diff.InstanceId.Value);
+            return obj ? obj.name : $"(Missing Object {diff.InstanceId.Value})";
+        }
+
+        return !string.IsNullOrEmpty(diff.TempId) ? $"(New Object: {diff.TempId})" : "(Unknown)";
+    }
+
+    private Texture GetIconForDiff(SceneDiff diff)
+    {
+        if (diff is AddComponentDiff) return EditorGUIUtility.IconContent("cs Script Icon").image;
+        if (diff is RemoveComponentDiff) return EditorGUIUtility.IconContent("winbtn_mac_max").image;
+        if (diff is UpdatePropertyDiff) return EditorGUIUtility.IconContent("d_FilterSelectedOnly").image;
+        if (diff is CreateObjectDiff) return EditorGUIUtility.IconContent("Prefab Icon").image;
+        if (diff is RemoveObjectDiff) return EditorGUIUtility.IconContent("TreeEditor.Trash").image;
+        return EditorGUIUtility.IconContent("GameObject Icon").image;
+    }
+
+    private Color GetColorForDiff(SceneDiff diff)
+    {
+        return diff switch
+        {
+            AddComponentDiff or CreateObjectDiff => Color.green,
+            RemoveComponentDiff or RemoveObjectDiff => Color.red,
+            UpdatePropertyDiff => Color.yellow,
+            _ => Color.white,
+        };
     }
 
     private void ApplySelectedDiffs()
     {
+        // TODO: filter out selected diffs with unselected parent diffs (aka. disabled diffs)
         var orderedDiffs = _diffs
-            .Select((diff, idx) => (diff, idx))
-            .Where(pair => _diffs[pair.idx].selected)
-            .OrderBy(pair => pair.diff.diff.Priority)
-            .Select(pair => pair.diff)
+            .Where(d => _diffSelections.TryGetValue(d, out var selected) && selected)
+            .OrderBy(d => d.Priority)
             .ToArray();
 
         foreach (var diff in orderedDiffs)
-            ResponseHandler.ApplyDiff(diff.diff);
+            ResponseHandler.ApplyDiff(diff);
     }
 
     #endregion
