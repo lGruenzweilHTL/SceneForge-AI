@@ -9,17 +9,21 @@ public static class ResponseHandler
 {
     public static void ApplyDiff(SceneDiff diff)
     {
+        if (diff is UpdatePropertyDiff propDiff)
+        {
+            var component = diff.GameObject.GetComponent(diff.ComponentType);
+            if (!component)
+            {
+                Debug.LogWarning(
+                    $"Component {diff.ComponentType.Name} not found on GameObject {diff.GameObject.name}. " +
+                    "This might be due to a missing AddComponent diff.");
+                return;
+            }
+        }
         switch (diff.DiffType)
         {
             case SceneDiffType.PropertyChange:
-                var component = diff.Component ?? diff.GameObject.GetComponent(diff.ComponentType);
-                if (!component)
-                {
-                    Debug.LogWarning(
-                        $"Component {diff.ComponentType.Name} not found on GameObject {diff.GameObject.name}. " +
-                        "This might be due to a missing AddComponent diff.");
-                    return;
-                }
+                
 
                 component.GetType()
                     .GetProperty(diff.Property.Name)

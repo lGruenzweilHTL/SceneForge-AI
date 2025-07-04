@@ -23,8 +23,7 @@ public static class AITools
     [AITool("Gets information such as tag, layer, position and rotation about a game-object by its instance ID.")]
     public static object GetObjectById([AIToolParam("The instance id of the object")] int instanceId)
     {
-        var obj = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None)
-            .FirstOrDefault(o => o.GetInstanceID() == instanceId);
+        var obj = ObjectUtility.FindByInstanceId(instanceId);
         
         if (obj == null)
             return $"No object found with ID {instanceId}";
@@ -131,8 +130,7 @@ public static class AITools
         [AIToolParam("The instance ID of the game object")] int instanceId,
         [AIToolParam("The type of component to add (e.g. Rigidbody, BoxCollider)")] string componentType)
     {
-        var obj = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None)
-            .FirstOrDefault(o => o.GetInstanceID() == instanceId);
+        var obj = ObjectUtility.FindByInstanceId(instanceId);
         
         if (obj == null)
             return $"No object found with ID {instanceId}";

@@ -60,7 +60,7 @@ public class DiffViewerEditorWindow : EditorWindow
 
     #region Diff Drawing
     
-    private void DrawGameObjectDiff(IGrouping<GameObject, (SceneDiff diff, int)> goGroup)
+    private void DrawGameObjectDiff(IGrouping<GameObject, (Diffs diff, int)> goGroup)
     {
         var go = goGroup.Key;
         _goFoldouts.TryAdd(go, true);
@@ -97,7 +97,7 @@ public class DiffViewerEditorWindow : EditorWindow
         }
     }
 
-    private void DrawComponentDiff(GameObject go, IGrouping<Type, (SceneDiff, int)> compGroup)
+    private void DrawComponentDiff(GameObject go, IGrouping<Type, (Diffs, int)> compGroup)
     {
         var compType = compGroup.Key;
         var compKey = (go, compType);
@@ -131,7 +131,7 @@ public class DiffViewerEditorWindow : EditorWindow
         EditorGUILayout.Space(10);
     }
 
-    private void DrawDiff(GameObject go, (GameObject, Type) compKey, int idx, SceneDiff diff, Type compType)
+    private void DrawDiff(GameObject go, (GameObject, Type) compKey, int idx, Diffs diff, Type compType)
     {
         bool enabled = _goEnabled[go] && _compEnabled[compKey];
         EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
@@ -177,20 +177,15 @@ public class DiffViewerEditorWindow : EditorWindow
     private void Initialize(SceneDiff[] diffs)
     {
         _diffs = diffs
-            .Where(d => d.OldValue != d.NewValue || d.OldValue == null || d.NewValue == null)
+            .Where(d => d is not UpdatePropertyDiff propDiff || 
+                        (propDiff.OldValue != null && propDiff.NewValue != null &&
+                         !propDiff.OldValue.Equals(propDiff.NewValue)))
             .ToArray();
         _selectedDiffs = _diffs
             .Select((_, i) => i)
             .ToDictionary(i => i, i => true);
         _goFoldouts.Clear();
         _compFoldouts.Clear();
-        
-        // Initialize game object and componentType for each diff
-        foreach (var sceneDiff in _diffs)
-        {
-            sceneDiff.GameObject ??= sceneDiff.Component?.gameObject;
-            sceneDiff.ComponentType ??= sceneDiff.Component?.GetType();
-        }
     }
 
     private void ApplySelectedDiffs()
