@@ -103,6 +103,13 @@ public static class AIHandler
             foreach (var toolCall in toolCalls)
             {
                 var result = AIToolInvoker.InvokeTool(toolCall.ToolName, toolCall.Arguments);
+
+                if (result is SceneDiff diff)
+                {
+                    responseMessage.Diffs = responseMessage.Diffs.Append(diff).ToArray();
+                    result = "Tool call successful. Scene diff created";
+                }
+                
                 _currentChat.History.Add(new ChatMessage
                 {
                     Display = true,

@@ -1,40 +1,43 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using JetBrains.Annotations;
-using UnityEditor;
 using UnityEngine;
 
 public static class ResponseHandler
 {
     public static void ApplyDiff(SceneDiff diff)
     {
+        var gameObject = ObjectUtility.FindByInstanceId(diff.InstanceId);
         if (diff is UpdatePropertyDiff propDiff)
         {
-            var component = diff.GameObject.GetComponent(diff.ComponentType);
+            var component = gameObject.GetComponent(propDiff.ComponentType);
             if (!component)
             {
                 Debug.LogWarning(
-                    $"Component {diff.ComponentType.Name} not found on GameObject {diff.GameObject.name}. " +
+                    $"Component {propDiff.ComponentType} not found on GameObject {gameObject.name}. " +
                     "This might be due to a missing AddComponent diff.");
                 return;
             }
+            
+            component.GetType()
+                .GetProperty(propDiff.PropertyName)
+                ?.SetValue(component, propDiff.NewValue);
         }
-        switch (diff.DiffType)
+        else if (diff is AddComponentDiff addDiff)
         {
-            case SceneDiffType.PropertyChange:
-                
-
-                component.GetType()
-                    .GetProperty(diff.Property.Name)
-                    ?.SetValue(component, diff.NewValue);
-                break;
-            case SceneDiffType.AddComponent:
-                diff.GameObject.AddComponent(diff.ComponentType);
-                break;
-            case SceneDiffType.RemoveComponent:
-                UnityEngine.Object.DestroyImmediate(diff.GameObject.GetComponent(diff.ComponentType));
-                break;
+            var type = ObjectUtility.FindType(addDiff.ComponentType);
+            gameObject.AddComponent(type);
+        }
+        else if (diff is RemoveComponentDiff removeDiff)
+        {
+            var component = gameObject.GetComponent(removeDiff.ComponentType);
+            Object.DestroyImmediate(component);
+        }
+        else if (diff is CreateObjectDiff createDiff)
+        {
+            var newObject = new GameObject(createDiff.Name);
+            if (gameObject) newObject.transform.SetParent(gameObject.transform);
+        }
+        else if (diff is RemoveObjectDiff)
+        {
+            Object.DestroyImmediate(gameObject);
         }
     }
 }

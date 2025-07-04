@@ -54,7 +54,7 @@ public class SceneForgeEditorWindow : EditorWindow
             });
             GUILayout.Label(message.Role.ToUpper());
             GUILayout.FlexibleSpace();
-            if (message.Json != null)
+            if (message.Diffs.Any())
             {
                 if (GUILayout.Button("Accept", GUILayout.Width(90)))
                     foreach (var diff in message.Diffs)

@@ -7,7 +7,6 @@ public class ChatMessage
     public string Role;
     public string Content;
     public string Reasoning;
-    [CanBeNull] public string Json = null;
     public SceneDiff[] Diffs = Array.Empty<SceneDiff>();
     public bool Display = true;
     public string ToolCallId = null; // Used to track tool calls

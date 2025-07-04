@@ -201,6 +201,16 @@ public static class AITools
         return $"Spawned {prefab.name} at position {instance.transform.position}. ID: {instance.GetInstanceID()}";
     }
 
+    [AITool("This tool is only used for testing. Only invoke if explicitly asked to.")]
+    public static object TestFunction()
+    {
+        return new CreateObjectDiff
+        {
+            InstanceId = 0,
+            Name = "TestObject"
+        };
+    }
+
     private static List<string> GetChildrenNamesAndIds(Transform parent)
     {
         var objects = new List<string>();

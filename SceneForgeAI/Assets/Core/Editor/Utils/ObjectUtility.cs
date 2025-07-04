@@ -11,7 +11,7 @@ public class ObjectUtility
             .FirstOrDefault(go => go.GetInstanceID() == instanceId);
     }
 
-    public static Type GetType(string name)
+    public static Type FindType(string name)
     {
         // Try to find the type in all loaded assemblies
         var type = Type.GetType(name) 
