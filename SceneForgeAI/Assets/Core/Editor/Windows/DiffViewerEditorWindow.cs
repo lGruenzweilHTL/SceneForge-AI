@@ -10,6 +10,7 @@ public class DiffViewerEditorWindow : EditorWindow
     private Dictionary<int, bool> _goFoldouts = new();
     private Dictionary<(int groupKey, string componentType), bool> _componentFoldouts = new();
     private Dictionary<SceneDiff, bool> _diffSelections = new();
+    private Dictionary<string, Texture> _componentIcons = new();
 
     [MenuItem("Tools/Diff/Demo")]
     public static void ShowDemoWindow()
@@ -80,14 +81,14 @@ public class DiffViewerEditorWindow : EditorWindow
                         {
                             EditorGUI.indentLevel++;
                             foreach (var diff in compGroup)
-                                DrawDiffLine(diff, objectEnabled && compEnabled);
+                                DrawDiffLine(diff, objectEnabled, compEnabled);
                             EditorGUI.indentLevel--;
                         }
                     }
                     else
                     {
                         foreach (var diff in compGroup)
-                            DrawDiffLine(diff, objectEnabled && compEnabled);
+                            DrawDiffLine(diff, objectEnabled, compEnabled);
                     }
                 }
 
@@ -105,22 +106,27 @@ public class DiffViewerEditorWindow : EditorWindow
 
     #region UI Helpers
 
-    private void DrawDiffLine(SceneDiff diff, bool parentEnabled)
+    private void DrawDiffLine(SceneDiff diff, bool parentEnabled, bool selfEnabled)
     {
+        const int indentSize = 15;
+        const int initialSpacing = 15;
+        const int toggleDimension = 18;
+
         EditorGUILayout.BeginHorizontal();
 
         bool isRootToggle = diff is CreateObjectDiff or RemoveObjectDiff;
-        bool allowToggle = isRootToggle || parentEnabled;
+        bool isComponent = diff is AddComponentDiff or RemoveComponentDiff;
+        bool allowToggle = (parentEnabled && selfEnabled) || isRootToggle || (parentEnabled && isComponent);
 
         EditorGUI.BeginDisabledGroup(!allowToggle);
 
         bool current = IsDiffSelected(diff);
-        bool updated = EditorGUILayout.Toggle(current, GUILayout.Width(18));
+        var toggleRect = GUILayoutUtility.GetRect(toggleDimension, toggleDimension,
+            GUILayout.Width(EditorGUI.indentLevel * indentSize + initialSpacing));
+        bool updated = EditorGUI.Toggle(toggleRect, current);
         if (updated != current) _diffSelections[diff] = updated;
-        
-        GUILayout.Space(EditorGUI.indentLevel * 15);
 
-        GUILayout.Label(GetIconForDiff(diff), GUILayout.Width(18), GUILayout.Height(18));
+        GUILayout.Label(GetIconForDiff(diff), GUILayout.Width(toggleDimension), GUILayout.Height(toggleDimension));
 
         GUI.color = GetColorForDiff(diff);
         EditorGUILayout.LabelField(diff.ToString());
@@ -164,26 +170,35 @@ public class DiffViewerEditorWindow : EditorWindow
         return !string.IsNullOrEmpty(diff.TempId) ? $"(New Object: {diff.TempId})" : "(Unknown)";
     }
 
-    private Texture GetIconForDiff(SceneDiff diff)
+    private Texture GetIconForDiff(SceneDiff diff) => diff switch
     {
-        if (diff is AddComponentDiff) return EditorGUIUtility.IconContent("cs Script Icon").image;
-        if (diff is RemoveComponentDiff) return EditorGUIUtility.IconContent("winbtn_mac_max").image;
-        if (diff is UpdatePropertyDiff) return EditorGUIUtility.IconContent("d_FilterSelectedOnly").image;
-        if (diff is CreateObjectDiff) return EditorGUIUtility.IconContent("Prefab Icon").image;
-        if (diff is RemoveObjectDiff) return EditorGUIUtility.IconContent("TreeEditor.Trash").image;
-        return EditorGUIUtility.IconContent("GameObject Icon").image;
+        AddComponentDiff addDiff => GetIconForComponent(addDiff),
+        RemoveComponentDiff => EditorGUIUtility.IconContent("TreeEditor.Trash").image,
+        UpdatePropertyDiff => EditorGUIUtility.IconContent("d_BuildSettings.N3DS").image,
+        CreateObjectDiff => EditorGUIUtility.IconContent("Prefab Icon").image,
+        RemoveObjectDiff => EditorGUIUtility.IconContent("TreeEditor.Trash").image,
+        _ => EditorGUIUtility.IconContent("GameObject Icon").image
+    };
+    
+    private Texture GetIconForComponent(AddComponentDiff diff) 
+    {
+        if (_componentIcons.TryGetValue(diff.ComponentType, out var icon))
+            return icon;
+        
+        var componentType = ObjectUtility.FindType(diff.ComponentType);
+        icon = EditorGUIUtility.ObjectContent(null, componentType).image;
+        var texture = icon ?? EditorGUIUtility.IconContent("cs Script Icon").image;
+        _componentIcons[diff.ComponentType] = texture;
+        return texture;
     }
 
-    private Color GetColorForDiff(SceneDiff diff)
+    private Color GetColorForDiff(SceneDiff diff) => diff switch
     {
-        return diff switch
-        {
-            AddComponentDiff or CreateObjectDiff => Color.green,
-            RemoveComponentDiff or RemoveObjectDiff => Color.red,
-            UpdatePropertyDiff => Color.yellow,
-            _ => Color.white,
-        };
-    }
+        AddComponentDiff or CreateObjectDiff => Color.green,
+        RemoveComponentDiff or RemoveObjectDiff => Color.red,
+        UpdatePropertyDiff => Color.yellow,
+        _ => Color.white,
+    };
 
     private void ApplySelectedDiffs()
     {
