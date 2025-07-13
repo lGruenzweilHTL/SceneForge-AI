@@ -46,7 +46,7 @@ public class GroqMessageHandler : IMessageHandler
         }
     }
 
-    public IEnumerator GetChatCompletion(AIMessage[] history, Tool[] tools, Action<string, string, ToolCall[]> onMessageCompleted)
+    public IEnumerator GetChatCompletion(AIMessage[] history, Tool[] tools, Action<string, string, ToolCall[], bool> onMessageCompleted)
     {
         var body = new
         {
@@ -69,17 +69,18 @@ public class GroqMessageHandler : IMessageHandler
         if (operation.webRequest.result == UnityWebRequest.Result.Success)
         {
             var response = JsonConvert.DeserializeObject<GroqResponse>(downloadHandler.text);
-            onMessageCompleted?.Invoke(response.Choices[0].Message.Content, response.Choices[0].Message.Reasoning, GetToolCalls(response.Choices[0]));
+            bool reprompt = response.Choices[0].FinishReason == "tool_calls";
+            onMessageCompleted?.Invoke(response.Choices[0].Message.Content, response.Choices[0].Message.Reasoning, GetToolCalls(response.Choices[0]), reprompt);
         }
         else
         {
             Debug.LogError($"Error fetching chat completion: {operation.webRequest.error}");
-            onMessageCompleted?.Invoke(null, null, Array.Empty<ToolCall>());
+            onMessageCompleted?.Invoke(null, null, Array.Empty<ToolCall>(), false);
         }
     }
 
     public IEnumerator GetChatCompletionStreamed(AIMessage[] history, Tool[] tools, Action<string> onNewToken,
-        Action<string> onNewReasoningToken, Action<ToolCall[]> onMessageCompleted)
+        Action<string> onNewReasoningToken, Action<ToolCall[], bool> onMessageCompleted)
     {
         var body = new
         {
@@ -98,7 +99,7 @@ public class GroqMessageHandler : IMessageHandler
         downloadHandler.OnError += err =>
         {
             Debug.LogError($"Error in request: {err.error.message}");
-            onMessageCompleted?.Invoke(Array.Empty<ToolCall>());
+            onMessageCompleted?.Invoke(Array.Empty<ToolCall>(), false);
         };
         
         var operation = WebRequestUtility.SendPostRequest(Endpoint, json, new Dictionary<string, string>
@@ -122,7 +123,8 @@ public class GroqMessageHandler : IMessageHandler
                 var toolCalls = GetToolCalls(token);
                 if (toolCalls != null && toolCalls.Length > 0)
                 {
-                    onMessageCompleted?.Invoke(toolCalls);
+                    bool reprompt = true; // groq currently doesn't support agentic tooling, so always reprompt
+                    onMessageCompleted?.Invoke(toolCalls, reprompt);
                     yield break; // Exit early if tool calls are present
                 }
                 
@@ -133,7 +135,7 @@ public class GroqMessageHandler : IMessageHandler
             yield return null;
         }
         
-        onMessageCompleted?.Invoke(Array.Empty<ToolCall>());
+        onMessageCompleted?.Invoke(Array.Empty<ToolCall>(), false);
     }
 
     private object GetVisionMessage(AIMessage msg)

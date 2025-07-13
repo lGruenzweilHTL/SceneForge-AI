@@ -39,14 +39,14 @@ public static class AIHandler
                 tools,
                 t => response.Content += t,
                 rt => response.Reasoning += rt,
-                toolCalls => ProcessToolCalls(response, toolCalls))
+                (toolCalls, reprompt) => ProcessToolCalls(response, toolCalls, reprompt))
             : handler.GetChatCompletion(messages,
                 tools,
-                (content, reasoning, toolCalls) =>
+                (content, reasoning, toolCalls, reprompt) =>
                 {
                     response.Content = content;
                     response.Reasoning = reasoning;
-                    ProcessToolCalls(response, toolCalls);
+                    ProcessToolCalls(response, toolCalls, reprompt);
                 }));
     }
 
@@ -65,7 +65,7 @@ public static class AIHandler
             .ToArray();
     }
     
-    private static void ProcessToolCalls(ChatMessage responseMessage, ToolCall[] toolCalls)
+    private static void ProcessToolCalls(ChatMessage responseMessage, ToolCall[] toolCalls, bool reprompt)
     {
         responseMessage.Diffs = Array.Empty<SceneDiff>();
 
@@ -80,18 +80,19 @@ public static class AIHandler
                     responseMessage.Diffs = responseMessage.Diffs.Append(diff).ToArray();
                     result = "Tool call successful. Scene diff created";
                 }
-                
-                ChatManager.AddMessageToHistory(new ChatMessage
-                {
-                    Display = true,
-                    Role = "tool",
-                    Name = toolCall.ToolName,
-                    Content = JsonConvert.SerializeObject(result, Formatting.Indented),
-                    ToolCallId = toolCall.Id
-                });
-            }
 
-            SendMessage(ChatManager.CurrentChat.MessageHandler);
+                if (reprompt)
+                    ChatManager.AddMessageToHistory(new ChatMessage
+                    {
+                        Display = true,
+                        Role = "tool",
+                        Name = toolCall.ToolName,
+                        Content = JsonConvert.SerializeObject(result, Formatting.Indented),
+                        ToolCallId = toolCall.Id
+                    });
+            }
         }
+        
+        if (reprompt) SendMessage(ChatManager.CurrentChat.MessageHandler);
     }
 }
