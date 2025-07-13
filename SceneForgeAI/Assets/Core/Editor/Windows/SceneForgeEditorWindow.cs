@@ -9,7 +9,6 @@ public class SceneForgeEditorWindow : EditorWindow
     private Vector2 _scrollPosition;
     private List<string> _images = new();
     private List<Texture> _cachedPreviewTextures = new();
-    private int _currentChatIndex = 0;
     private Dictionary<ChatMessage, bool> _reasoningFoldouts = new();
     
     [MenuItem("Tools/SceneForge AI")]
@@ -25,14 +24,12 @@ public class SceneForgeEditorWindow : EditorWindow
         GUILayout.Label("Scene Forge AI", HeaderStyles.HeaderStyle);
         
         GUILayout.BeginHorizontal();
-        var chats = AIHandler.Chats;
-        _currentChatIndex = EditorGUILayout.Popup(_currentChatIndex, chats.Select(c => c.Name).ToArray());
-        AIHandler.SetCurrentChat(_currentChatIndex);
+        var chats = ChatManager.Chats;
+        ChatManager.CurrentChatIndex = EditorGUILayout.Popup(ChatManager.CurrentChatIndex, chats.Select(c => c.Name).ToArray());
         GUILayout.FlexibleSpace();
         if (GUILayout.Button("New Chat", GUILayout.Width(125)))
         {
-            AIHandler.NewChat("Chat" + chats.Length);
-            _currentChatIndex = chats.Length; // Set to the new chat
+            ChatManager.NewChat("Chat" + chats.Length);
             _scrollPosition = Vector2.zero; // Reset scroll position
         }
         GUILayout.EndHorizontal();
@@ -45,7 +42,7 @@ public class SceneForgeEditorWindow : EditorWindow
                 margin = new RectOffset(5, 5, 0, 0),
             }, 
             GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
-        foreach (var message in AIHandler.GetCurrentChatHistory())
+        foreach (var message in ChatManager.GetDisplayedMessages())
         {
             GUILayout.BeginVertical(GUI.skin.button);
             GUILayout.BeginHorizontal(new GUIStyle
@@ -157,7 +154,7 @@ public class SceneForgeEditorWindow : EditorWindow
 
         GUILayout.BeginHorizontal();
         bool shouldSendPrompt = GUILayout.Button("Send Prompt") || enterPressed;
-        EditorGUI.BeginDisabledGroup(!AIHandler.Chats[_currentChatIndex].MessageHandler.ImagesSupported);
+        EditorGUI.BeginDisabledGroup(!ChatManager.CurrentChat.MessageHandler.ImagesSupported);
         if (GUILayout.Button("Attach Image", GUILayout.Width(120)))
             _images.Add(ImageUtility.SelectAndEncodeImage());
         EditorGUI.EndDisabledGroup();
